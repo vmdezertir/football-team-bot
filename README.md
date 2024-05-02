@@ -19,7 +19,7 @@ The accounts on RapidAPI and on Dashboard are dissociated. Each of these registr
 - RAPIDAPI : https://api-football-v1.p.rapidapi.com/v3/
 - API-SPORTS : https://v3.football.api-sports.io/
 
-!!This repo use Dashboard way.
+!!This repo use Dashboard way. More details you can find [here](https://www.api-football.com/documentation-v3#section/Authentication).
 
 ## Installation
 
