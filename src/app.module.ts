@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TelegramModule } from '@app/telegram/telegram.module';
+import { WidgetsModule } from '@app/widgets/widgets.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { TelegramModule } from '@app/telegram/telegram.module';
       },
       inject: [ConfigService],
     }),
-    TelegramModule
+    TelegramModule,
+    WidgetsModule
   ],
 })
 

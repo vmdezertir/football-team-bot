@@ -9,6 +9,9 @@ import { EComands } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
 import { HttpModule } from '@nestjs/axios';
 import { ApiFootballService } from '@app/services/apiFootball.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Favorite } from '@app/entities';
+import { FavoriteRepository } from '@app/repositories';
 
 @Module({
   imports: [TelegrafModule.forRootAsync({
@@ -39,8 +42,9 @@ import { ApiFootballService } from '@app/services/apiFootball.service';
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([Favorite])
   ],
-  providers: [TelegramService, ApiFootballService, AddTeamScene],
+  providers: [TelegramService, ApiFootballService, AddTeamScene, FavoriteRepository],
 })
 
 @Update()
