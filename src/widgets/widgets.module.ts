@@ -6,6 +6,6 @@ import { ConfigModule } from '@nestjs/config';
   imports: [ConfigModule],
   controllers: [WidgetsController],
   providers: [],
-  exports: []
+  exports: [],
 })
 export class WidgetsModule {}

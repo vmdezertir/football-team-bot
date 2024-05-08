@@ -8,8 +8,7 @@ import { ITeam, ITeamApiResponse } from '@app/interfaces/team';
 export class ApiFootballService {
   private readonly logger = new Logger(ApiFootballService.name);
 
-  constructor(private readonly httpService: HttpService) {
-  }
+  constructor(private readonly httpService: HttpService) {}
 
   async findAllLeaguesByCountry(countryCode: string): Promise<ILeague[]> {
     const { data } = await firstValueFrom(
@@ -27,9 +26,7 @@ export class ApiFootballService {
   }
 
   async findTeamById(teamId: number): Promise<any> {
-    const { data } = await firstValueFrom(
-      this.httpService.get<ITeamApiResponse>(`/teams?id=${teamId}`),
-    );
+    const { data } = await firstValueFrom(this.httpService.get<ITeamApiResponse>(`/teams?id=${teamId}`));
     return data.response.map(({ team }) => team);
   }
 }

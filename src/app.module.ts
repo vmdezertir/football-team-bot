@@ -10,7 +10,7 @@ import { WidgetsModule } from '@app/widgets/widgets.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (confService: ConfigService) => {
-        return ({
+        return {
           type: 'postgres',
           host: confService.get<string>('DB_HOST'),
           port: confService.get<number>('DB_PORT'),
@@ -20,14 +20,12 @@ import { WidgetsModule } from '@app/widgets/widgets.module';
           entities: [],
           synchronize: true,
           autoLoadEntities: true,
-        });
+        };
       },
       inject: [ConfigService],
     }),
     TelegramModule,
-    WidgetsModule
+    WidgetsModule,
   ],
 })
-
-
 export class AppModule {}

@@ -14,7 +14,9 @@ export const getArrayChunk = (array: any[], size: number = 20): any[][] => {
 const COUNTRY_LIMIT = 30;
 
 export const getCountriesButtons = (page: number = 0) => {
-  const countries = Object.entries(countryJson).map((country: [string, string]) => Markup.button.callback(country[1], `COUNTRY_${country[0]}`));
+  const countries = Object.entries(countryJson).map((country: [string, unknown]) =>
+    Markup.button.callback(country[1] as string, `COUNTRY_${country[0]}`),
+  );
   const allButtons = getArrayChunk(countries, COUNTRY_LIMIT);
 
   const buttons = [];
@@ -32,14 +34,8 @@ export const getCountriesButtons = (page: number = 0) => {
   return buttons;
 };
 
-export const getLeagueButtons = (leagues: ILeague[]) => leagues.map(({
-                                                                       name,
-                                                                       id,
-                                                                     }) => [Markup.button.callback(name, `LEAGUE_${id}`)]);
+export const getLeagueButtons = (leagues: ILeague[]) =>
+  leagues.map(({ name, id }) => [Markup.button.callback(name, `LEAGUE_${id}`)]);
 
-export const getTeamButtons = (teams: ITeam[]) => teams.map(({
-                                                                   name,
-                                                                   code,
-                                                                   id,
-                                                                 }) => [Markup.button.callback(`${name} (${code})`, `TEAM_${id}`)]);
-
+export const getTeamButtons = (teams: ITeam[]) =>
+  teams.map(({ name, code, id }) => [Markup.button.callback(`${name} (${code})`, `TEAM_${id}`)]);

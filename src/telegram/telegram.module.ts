@@ -7,30 +7,31 @@ import { AddTeamScene } from '@app/scenes';
 import { TelegramService } from '@app/telegram/telegram.service';
 import { EComands } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
-import { HttpModule } from '@nestjs/axios';
+import { HttpModule, HttpModuleAsyncOptions } from '@nestjs/axios';
 import { ApiFootballService } from '@app/services/apiFootball.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Favorite } from '@app/entities';
 import { FavoriteRepository } from '@app/repositories';
 
 @Module({
-  imports: [TelegrafModule.forRootAsync({
-    imports: [ConfigModule],
-    useFactory: (confService: ConfigService) => {
-      const store = Postgres({
-        host: confService.get<string>('DB_HOST'),
-        database: confService.get<string>('DB_NAME'),
-        user: confService.get<string>('DB_USERNAME'),
-        password: confService.get<string>('DB_PASSWORD'),
-      });
+  imports: [
+    TelegrafModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (confService: ConfigService) => {
+        const store = Postgres({
+          host: confService.get<string>('DB_HOST'),
+          database: confService.get<string>('DB_NAME'),
+          user: confService.get<string>('DB_USERNAME'),
+          password: confService.get<string>('DB_PASSWORD'),
+        });
 
-      return ({
-        token: confService.get<string>('BOT_TOKEN'),
-        middlewares: [session({ store })],
-      });
-    },
-    inject: [ConfigService],
-  }),
+        return {
+          token: confService.get('BOT_TOKEN') as string,
+          middlewares: [session({ store })],
+        };
+      },
+      inject: [ConfigService],
+    }),
     HttpModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -42,17 +43,13 @@ import { FavoriteRepository } from '@app/repositories';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Favorite])
+    TypeOrmModule.forFeature([Favorite]),
   ],
   providers: [TelegramService, ApiFootballService, AddTeamScene, FavoriteRepository],
 })
-
 @Update()
 export class TelegramModule {
-  constructor(
-    private readonly service: TelegramService,
-  ) {
-  }
+  constructor(private readonly service: TelegramService) {}
 
   @Start()
   async startCommand(ctx: Context) {

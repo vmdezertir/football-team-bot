@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+    "lib": ["ES2022"],
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -11,24 +12,15 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@app/*": [
-        "./src/*"
-      ],
+      "@app/*": ["src/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
+    "strict": true,
+    "strictPropertyInitialization": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "include": [
-      "src"
-    ],
-    "exclude": [
-      "node_modules"
-    ]
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

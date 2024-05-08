@@ -6,21 +6,24 @@ import { getAnswer, getCountriesButtons, getLeagueButtons, getTeamButtons } from
 import { CallbackQuery } from '@telegraf/types/markup';
 import { Markup } from 'telegraf';
 import { ApiFootballService } from '@app/services/apiFootball.service';
+import { ITeam } from '@app/interfaces/team';
 
 @Injectable()
 @Scene(EScenes.ADD_TEAM_SCENE)
 export class AddTeamScene {
-  constructor(private readonly footballService: ApiFootballService) {
-  }
+  constructor(private readonly footballService: ApiFootballService) {}
 
   private readonly logger = new Logger(AddTeamScene.name);
-
 
   @SceneEnter()
   async start(@Ctx() ctx: SceneContext) {
     ctx.scene.state = {};
+
     const menu = Markup.inlineKeyboard(getCountriesButtons());
-    await ctx.replyWithHTML('Запрошую тебе на захоплюючу подорож у світ футбольних емоцій!\nСпершу, давай оберемо країну, яка цікавить. Представ собі величні гори Швейцарії, спокійні води Голландії чи маєтність історії в Іспанії.\nПодумай про свої вподобання та відчуйте магію вибору.', menu);
+    await ctx.replyWithHTML(
+      'Запрошую тебе на захоплюючу подорож у світ футбольних емоцій!\nСпершу, давай оберемо країну, яка цікавить. Представ собі величні гори Швейцарії, спокійні води Голландії чи маєтність історії в Іспанії.\nПодумай про свої вподобання та відчуйте магію вибору.',
+      menu,
+    );
     return;
   }
 
@@ -52,9 +55,11 @@ export class AddTeamScene {
       return;
     }
 
-
     ctx.scene.state = { country: countryCode, leagues };
-    await ctx.editMessageText(`Чудово. Тепер, коли ми обрали країну <b>(${countryCode})</b>, час зануритися у її футбольну атмосферу. Уяви собі гучні трибуни, яскраві фанатські хореографії та енергію гри. Звук сирен та вибухи радощів заповнюють повітря.\n<b>Що скажеш на рахунок ліги?</b>`, { parse_mode: 'HTML' });
+    await ctx.editMessageText(
+      `Чудово. Тепер, коли ми обрали країну <b>(${countryCode})</b>, час зануритися у її футбольну атмосферу. Уяви собі гучні трибуни, яскраві фанатські хореографії та енергію гри. Звук сирен та вибухи радощів заповнюють повітря.\n<b>Що скажеш на рахунок ліги?</b>`,
+      { parse_mode: 'HTML' },
+    );
     buttons = getLeagueButtons(leagues);
     if (buttons.length) {
       await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
@@ -89,9 +94,14 @@ export class AddTeamScene {
     //@ts-ignore
     const { country } = ctx.scene.state;
 
-    await ctx.editMessageText(`Нарешті, настав час обрати саму команду, яка стане твоїм футбольним провідником у цій захоплюючій подорожі. Це момент, коли ти відчуваєш справжнє співчуття та пристрасть до обраної команди. \n<b>Чи вибереш ти традиційно сильну команду з багаторічною історією, чи підтримаєш молоду та амбіційну команду, яка лише починає свій шлях до слави?</b>`, { parse_mode: 'HTML' });
+    await ctx.editMessageText(
+      `Нарешті, настав час обрати саму команду, яка стане твоїм футбольним провідником у цій захоплюючій подорожі. Це момент, коли ти відчуваєш справжнє співчуття та пристрасть до обраної команди. \n<b>Чи вибереш ти традиційно сильну команду з багаторічною історією, чи підтримаєш молоду та амбіційну команду, яка лише починає свій шлях до слави?</b>`,
+      { parse_mode: 'HTML' },
+    );
     const buttons = getTeamButtons(teams);
-    await ctx.editMessageReplyMarkup({ inline_keyboard: [[Markup.button.callback('Назад', `COUNTRY_${country}`)], ...buttons] });
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: [[Markup.button.callback('Назад', `COUNTRY_${country}`)], ...buttons],
+    });
     return;
   }
 
@@ -106,18 +116,26 @@ export class AddTeamScene {
     const teamId = Number(answer.split('TEAM_')[1] || 0);
 
     //@ts-ignore
-    const { teams } = ctx.scene.state;
+    const teams: ITeam[] = ctx.scene.state.teams;
     this.logger.log(teams);
     const team = teams.find(({ id }) => id == teamId);
     ctx.scene.state = { ...ctx.scene.state, team };
 
     if (team) {
-      await ctx.editMessageText(`🥅 Чудовий вибір!
+      await ctx.editMessageText(
+        `🥅 Чудовий вибір!
       \n <b>${team.name}</b> (${team.country})
-      \n Клуб заснований: ${team.founded}`, { parse_mode: 'HTML' });
+      \n Клуб заснований: ${team.founded}`,
+        { parse_mode: 'HTML' },
+      );
       //@ts-ignore
       const { league } = ctx.scene.state;
-      await ctx.editMessageReplyMarkup({ inline_keyboard: [[Markup.button.callback('Назад', `LEAGUE_${league}`)], [Markup.button.callback('Зберегти', `SAVE_TEAM`)]] });
+      await ctx.editMessageReplyMarkup({
+        inline_keyboard: [
+          [Markup.button.callback('Назад', `LEAGUE_${league}`)],
+          [Markup.button.callback('Зберегти', `SAVE_TEAM`)],
+        ],
+      });
     }
   }
 

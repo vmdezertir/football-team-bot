@@ -1,11 +1,6 @@
-import { IsDefined, IsInt, IsString, Min } from 'class-validator';
+import { IsDefined, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class WidgetsGameRespDto {
-  @IsDefined()
-  @IsInt()
-  @Min(1)
-  id: number;
-
+class BaseWidgetDto {
   @IsDefined()
   @IsString()
   apiHost: string;
@@ -13,4 +8,33 @@ export class WidgetsGameRespDto {
   @IsDefined()
   @IsString()
   apiKey: string;
+}
+
+export class WidgetsGameRespDto extends BaseWidgetDto {
+  @IsDefined()
+  @IsInt()
+  @Min(1)
+  id: number;
+}
+
+export class WidgetsStandingsRespDto extends BaseWidgetDto {
+  @IsDefined()
+  @IsInt()
+  @Min(1)
+  leagueId: number;
+
+  @IsOptional()
+  @IsString()
+  season?: string;
+}
+
+export class WidgetsGamesRespDto extends BaseWidgetDto {
+  @IsDefined()
+  @IsInt()
+  @Min(1)
+  leagueId: number;
+
+  @IsOptional()
+  @IsString()
+  season?: string;
 }

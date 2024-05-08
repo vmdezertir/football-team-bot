@@ -32,6 +32,7 @@ export class FavoriteRepository extends Repository<Favorite> {
 
     switch (caughtError.code) {
       case '23505': // unique_violation
+        // eslint-disable-next-line no-case-declarations
         const col = (caughtError.detail.match(/\([^()]+\)/g)[0] || '', '()');
         message = 'UNIQUE_' + col.trim().toUpperCase();
         break;

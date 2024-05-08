@@ -16,15 +16,14 @@ export class TelegramService {
             \n4. <b>Мінулі ігри:</b> Користувач може переглядати історію минулих матчів своїх улюблених команд, разом із результатами та основними подіями матчу.
             \n5. <b>Нагадування про майбутні матчі:</b> Бот надсилає користувачеві нагадування про майбутні матчі його улюблених команд за певний період часу перед початком матчу.
             \n6. <b>Текстова трансляція матчів:</b> Користувач може переглядати текстову трансляцію матчів своїх улюблених команд, отримуючи оновлення про події на полі в режимі реального часу.`,
-      Markup.keyboard([
-        [
-          Markup.button.callback('⭐ Улюблені', EComands.SEE_FAVORITES),
-        ],
-      ]),
+      Markup.keyboard([[Markup.button.callback('⭐ Улюблені', EComands.SEE_FAVORITES)]]),
     );
     await ctx.reply(
       'Якщо в тебе вже є додані команди, то ти можеш скористатись пунктом меню "⭐ Улюблені" або вкажи нові',
-      Markup.inlineKeyboard([[Markup.button.callback('Вказати команду', EComands.ADD_TEAM)], [Markup.button.callback('⭐ Улюблені', EComands.SEE_FAVORITES)]]),
+      Markup.inlineKeyboard([
+        [Markup.button.callback('Вказати команду', EComands.ADD_TEAM)],
+        [Markup.button.callback('⭐ Улюблені', EComands.SEE_FAVORITES)],
+      ]),
     );
   }
 
