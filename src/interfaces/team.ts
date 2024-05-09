@@ -1,3 +1,5 @@
+import { Favorite } from '@app/entities';
+
 export interface ITeam {
   id: number;
   name: string;

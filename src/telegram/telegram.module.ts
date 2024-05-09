@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { Action, Start, TelegrafModule, Update } from 'nestjs-telegraf';
+import { Hears, Start, TelegrafModule, Update } from 'nestjs-telegraf';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Postgres } from '@telegraf/session/pg';
 import { Context, session } from 'telegraf';
-import { AddTeamScene } from '@app/scenes';
+import { AddTeamScene, FavoriteScene } from '@app/scenes';
 import { TelegramService } from '@app/telegram/telegram.service';
-import { EComands } from '@app/enums';
+import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
-import { HttpModule, HttpModuleAsyncOptions } from '@nestjs/axios';
+import { HttpModule } from '@nestjs/axios';
 import { ApiFootballService } from '@app/services/apiFootball.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Favorite } from '@app/entities';
@@ -45,7 +45,7 @@ import { FavoriteRepository } from '@app/repositories';
     }),
     TypeOrmModule.forFeature([Favorite]),
   ],
-  providers: [TelegramService, ApiFootballService, AddTeamScene, FavoriteRepository],
+  providers: [TelegramService, ApiFootballService, AddTeamScene, FavoriteScene, FavoriteRepository],
 })
 @Update()
 export class TelegramModule {
@@ -56,8 +56,13 @@ export class TelegramModule {
     return this.service.start(ctx);
   }
 
-  @Action(EComands.ADD_TEAM as any)
+  @Hears('Вказати команду')
   async enterAddTeamScene(ctx: SceneContext) {
-    return this.service.enterAddTeamScene(ctx);
+    await ctx.scene.enter(EScenes.ADD_TEAM);
+  }
+
+  @Hears('⭐ Улюблені')
+  async enterFavoriteScene(ctx: SceneContext) {
+    await ctx.scene.enter(EScenes.FAVORITE);
   }
 }

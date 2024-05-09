@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
 
 @Entity({ name: 'favorites' })
+@Unique(['userId', 'id'])
 export class Favorite {
   @PrimaryGeneratedColumn('uuid')
   uuid: number;
