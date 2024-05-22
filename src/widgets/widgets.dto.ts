@@ -25,7 +25,7 @@ export class WidgetsStandingsRespDto extends BaseWidgetDto {
 
   @IsOptional()
   @IsString()
-  season?: string;
+  season: number;
 }
 
 export class WidgetsGamesRespDto extends BaseWidgetDto {
@@ -36,5 +36,5 @@ export class WidgetsGamesRespDto extends BaseWidgetDto {
 
   @IsOptional()
   @IsString()
-  season?: string;
+  season: number;
 }

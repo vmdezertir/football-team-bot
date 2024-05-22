@@ -1,10 +1,12 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Render } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Param, Query, Render } from '@nestjs/common';
 import { WidgetsGameRespDto, WidgetsGamesRespDto, WidgetsStandingsRespDto } from './widgets.dto';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('widgets')
 export class WidgetsController {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get('game/:id')
   @Render('game')
@@ -20,10 +22,10 @@ export class WidgetsController {
   @Get('games/:leagueId')
   @Render('games')
   @HttpCode(HttpStatus.OK)
-  async getGames(@Param('leagueId') leagueId: number): Promise<WidgetsGamesRespDto> {
+  async getGames(@Param('leagueId') leagueId: number, @Query('season') season: number): Promise<WidgetsGamesRespDto> {
     return {
       leagueId,
-      season: '2023',
+      season,
       apiHost: this.configService.get('FOOTBALL_API_HOST') as string,
       apiKey: this.configService.get('FOOTBALL_API_KEY') as string,
     };
@@ -32,10 +34,13 @@ export class WidgetsController {
   @Get('standings/:leagueId')
   @Render('standings')
   @HttpCode(HttpStatus.OK)
-  async getStandings(@Param('leagueId') leagueId: number): Promise<WidgetsStandingsRespDto> {
+  async getStandings(
+    @Param('leagueId') leagueId: number,
+    @Query('season') season: number,
+  ): Promise<WidgetsStandingsRespDto> {
     return {
       leagueId,
-      season: '2023',
+      season,
       apiHost: this.configService.get('FOOTBALL_API_HOST') as string,
       apiKey: this.configService.get('FOOTBALL_API_KEY') as string,
     };

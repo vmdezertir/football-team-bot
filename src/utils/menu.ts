@@ -3,7 +3,7 @@ import { Markup } from 'telegraf';
 import { ILeague } from '@app/interfaces';
 import { ITeam } from '@app/interfaces/team';
 import { Favorite } from '@app/entities';
-import { getFlagEmoji } from './countryFlag';
+import { getFlagEmoji } from './emoji';
 
 export const getArrayChunk = (array: any[], size: number = 20): any[][] => {
   let chunks: any[] = [];
@@ -43,4 +43,21 @@ export const getTeamButtons = (teams?: ITeam[]) =>
   teams ? teams.map(({ name, code, id }) => [Markup.button.callback(`${name} (${code})`, `TEAM_${id}`)]) : [];
 
 export const getFavoriteTeamButtons = (teams: Favorite[]) =>
-  teams.map(({ name, countryCode, id }) => [Markup.button.callback(`${name} (${countryCode})`, `FAVORITE_TEAM_${id}`)]);
+  teams.map(({ name, countryCode, uuid }) => [
+    Markup.button.callback(`${name} (${countryCode})`, `FAVORITE_TEAM_${uuid}`),
+  ]);
+
+export const getTeamLeagueButtons = (leagueId: number, season: number) => [
+  [
+    Markup.button.webApp(
+      'Турнірна таблиця',
+      `https://1d34-188-163-21-111.ngrok-free.app/widgets/standings/${leagueId}?season=${season}`,
+    ),
+  ],
+  [
+    Markup.button.webApp(
+      'Матчі',
+      `https://1d34-188-163-21-111.ngrok-free.app/widgets/games/${leagueId}?season=${season}`,
+    ),
+  ],
+];

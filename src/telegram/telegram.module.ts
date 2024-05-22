@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Postgres } from '@telegraf/session/pg';
 import { Context, session } from 'telegraf';
 import { AddTeamScene, FavoriteScene } from '@app/scenes';
-import { TelegramService } from '@app/telegram/telegram.service';
+import { TelegramStartService } from '@app/telegram/telegram.service';
 import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
 import { HttpModule } from '@nestjs/axios';
@@ -45,23 +45,23 @@ import { FavoriteRepository } from '@app/repositories';
     }),
     TypeOrmModule.forFeature([Favorite]),
   ],
-  providers: [TelegramService, ApiFootballService, AddTeamScene, FavoriteScene, FavoriteRepository],
+  providers: [TelegramStartService, ApiFootballService, AddTeamScene, FavoriteScene, FavoriteRepository],
 })
 @Update()
 export class TelegramModule {
-  constructor(private readonly service: TelegramService) {}
+  constructor(private readonly service: TelegramStartService) {}
 
   @Start()
   async startCommand(ctx: Context) {
     return this.service.start(ctx);
   }
 
-  @Hears('Вказати команду')
+  @Hears('🤔 Вказати команду')
   async enterAddTeamScene(ctx: SceneContext) {
     await ctx.scene.enter(EScenes.ADD_TEAM);
   }
 
-  @Hears('⭐ Улюблені')
+  @Hears('🫶🏼 Улюблені')
   async enterFavoriteScene(ctx: SceneContext) {
     await ctx.scene.enter(EScenes.FAVORITE);
   }

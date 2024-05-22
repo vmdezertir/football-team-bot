@@ -1,3 +1,5 @@
+import { BaseApiResponse } from './common';
+
 export interface ILeague {
   id: number;
   name: string;
@@ -9,8 +11,6 @@ interface ILeagueResponse {
   league: ILeague;
 }
 
-export interface ILeagueApiResponse {
-  get: string;
-  results: number;
+export interface ILeagueApiResponse extends BaseApiResponse {
   response: ILeagueResponse[];
 }

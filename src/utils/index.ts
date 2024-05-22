@@ -1,4 +1,5 @@
 export * from './getUserId';
 export * from './menu';
 export * from './getAnswer';
-export * from './countryFlag';
+export * from './emoji';
+export * from './renderAnswers';

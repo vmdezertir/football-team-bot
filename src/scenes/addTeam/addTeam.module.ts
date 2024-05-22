@@ -1,7 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Scene, SceneEnter, Ctx, Action } from 'nestjs-telegraf';
 import { EScenes } from '@app/enums';
-import { getAnswer, getCountriesButtons, getLeagueButtons, getTeamButtons, getUserId } from '@app/utils';
+import {
+  getAnswer,
+  getCountriesButtons,
+  getLeagueButtons,
+  getTeamButtons,
+  getUserId,
+  renderApiError,
+  renderLoading,
+} from '@app/utils';
 import { Markup } from 'telegraf';
 import { ApiFootballService } from '@app/services/apiFootball.service';
 import { ITeam } from '@app/interfaces/team';
@@ -65,10 +73,18 @@ export class AddTeamScene {
     }
 
     const countryCode = answer.split('COUNTRY_')[1];
-    await ctx.editMessageText('Оброблюю запит ⚽ ⚽ ⚽');
-    const leagues = await this.footballService.findAllLeaguesByCountry(countryCode);
+    await renderLoading(ctx);
+    let leagues;
 
-    if (!leagues.length) {
+    try {
+      leagues = await this.footballService.findAllLeaguesByCountry(countryCode);
+    } catch (err) {
+      this.logger.error(err);
+      renderApiError(ctx);
+      return;
+    }
+
+    if (!leagues || !leagues.length) {
       await ctx.editMessageText('Нажаль, нічого не знайшов. Спробуй іншу країну');
       const buttons = getCountriesButtons();
       await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
@@ -96,11 +112,19 @@ export class AddTeamScene {
     }
     const leagueId = Number(answer.split('LEAGUE_')[1] || 0);
     ctx.scene.state = { ...ctx.scene.state, league: leagueId };
-    await ctx.editMessageText('Оброблюю запит ⚽ ⚽ ⚽');
-    const teams = await this.footballService.findAllTeamsByLeague(leagueId);
+    await renderLoading(ctx);
+    let teams;
+
+    try {
+      teams = await this.footballService.findAllTeamsByLeague(leagueId);
+    } catch (err) {
+      this.logger.error(err);
+      renderApiError(ctx);
+      return;
+    }
     ctx.scene.state = { ...ctx.scene.state, teams };
 
-    if (!teams.length) {
+    if (!teams || !teams.length) {
       await ctx.editMessageText('🔍 Нажаль, нічого не знайшов. Спробуй іншу 🏆 лігу');
       const { leagues } = ctx.scene.state;
       const buttons = getLeagueButtons(leagues);
@@ -172,7 +196,7 @@ export class AddTeamScene {
     } catch (err) {
       this.logger.error('Team save error:', error);
       await ctx.editMessageText(
-        `Команда <b>${team.name}</b> вже додана.\nВсі збережені команди можна побачити в меню "Улюблені"`,
+        `Команда <b>${team.name}</b> вже додана.\nВсі збережені команди можна побачити в меню "🫶🏼 Улюблені"`,
         { parse_mode: 'HTML' },
       );
       await ctx.editMessageReplyMarkup({
@@ -190,7 +214,7 @@ export class AddTeamScene {
       inline_keyboard: [
         [Markup.button.callback('⬅️ Назад', `LEAGUE_${league}`)],
         [Markup.button.callback('До вибору країн', 'COUNTRIES')],
-        [Markup.button.callback('Перейти до улюблених', 'TO_FAVORITE')],
+        [Markup.button.callback('🫶🏼 Перейти до улюблених', 'TO_FAVORITE')],
       ],
     });
   }
