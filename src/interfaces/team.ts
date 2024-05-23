@@ -14,11 +14,11 @@ export interface ITeam extends IShortInfoTeam {
   national: boolean;
 }
 
-interface ITeamResponse {
+export interface ITeamResponse {
   team: ITeam;
 }
 
-interface ITeamSquadResponse {
+export interface ITeamSquadResponse {
   team: IShortInfoTeam;
   players: IPlayer[];
 }

@@ -7,7 +7,7 @@ export interface ILeague {
   logo: string;
 }
 
-interface ILeagueResponse {
+export interface ILeagueResponse {
   league: ILeague;
 }
 

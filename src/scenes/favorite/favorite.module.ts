@@ -179,19 +179,87 @@ export class FavoriteScene {
       return;
     }
 
-    const resultStr = fixtures.reduce((acc, { league, teams, fixture }, currentIndex) => {
+    for (const [index, { teams, league, fixture }] of Object.entries(fixtures)) {
+      const currentIndex = Number(index);
+      let res = '';
       if (
         !currentIndex ||
         (currentIndex && fixtures[currentIndex]?.league.id !== fixtures[currentIndex - 1]?.league.id)
       ) {
-        acc = `${acc}\n🏆 <u>${league.name} (${league.round})</u>\n`;
+        res = `🏆 <u>${league.name} (${league.round})</u>\n`;
       }
 
-      acc = `${acc}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(fixture.date, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (UTC)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
+      res = `${res}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(fixture.date, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (UTC)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
+      const menu = [
+        [
+          Markup.button.callback('🎲 Коефіцієнти', `FIXTURE_ODDS_${fixture.id}`),
+          Markup.button.callback('🔮 Прогноз', `FIXTURE_PRED_${fixture.id}`),
+        ],
+        [Markup.button.callback('🔔 Сповістити про початок', `FIXTURE_REMIND_${fixture.id}`)],
+      ];
+      await ctx.replyWithHTML(res, Markup.inlineKeyboard(menu));
+    }
+  }
 
-      return acc;
-    }, '');
+  @Action(/^FIXTURE_ODDS_/)
+  async getOdds(@Ctx() ctx: SceneCtx) {
+    const answer = getAnswer(ctx.update);
 
-    await ctx.replyWithHTML(resultStr);
+    if (!answer || !answer.startsWith('FIXTURE_ODDS_')) {
+      return;
+    }
+
+    // const fixture = Number(answer.split('FIXTURE_ODDS_')[1]);
+    await renderLoading(ctx);
+  }
+
+  @Action(/^FIXTURE_PRED_/)
+  async getPredictions(@Ctx() ctx: SceneCtx) {
+    const answer = getAnswer(ctx.update);
+
+    if (!answer || !answer.startsWith('FIXTURE_PRED_')) {
+      return;
+    }
+
+    const fixture = Number(answer.split('FIXTURE_PRED_')[1]);
+    await renderLoading(ctx);
+    let predictionData;
+
+    try {
+      predictionData = await this.footballService.findFixturePrediction(fixture);
+    } catch (err) {
+      this.logger.error(err);
+      renderApiError(ctx);
+      return;
+    }
+    if (!predictionData.length) {
+      await ctx.reply('🔮🎱 На данну хвилину не знаю. Таролог ще налаштовується');
+      return;
+    }
+
+    for (const { predictions, teams } of predictionData) {
+      const { advice, percent, winner, under_over, goals } = predictions;
+      await ctx.replyWithHTML(`
+        <b>Вірогідність перемоги в матчі ${teams.home.name} ⚔️ ${teams.away.name}</b>:
+        \n1️⃣ ${percent.home} 🤝 ${percent.draw} 2️⃣ ${percent.away}
+        \n💪 <b>Вірогідний переможець</b>: ${winner.name} (<i>${winner.comment}</i>)
+        \n↕️ <b>Під/Над</b>: ${under_over}*
+        \n⚽︎ <b>Голи вдома</b>: ${goals.home}*
+        \n⚽︎ <b>Голи в гостях</b>: ${goals.away}*
+        \n☝ <b>Порада</b>: ${advice}
+        \n\n* Наприклад -1.5 означає, що в матчі буде максимум 1.5 голів, тобто 1 гол.`);
+    }
+  }
+
+  @Action(/^FIXTURE_REMIND_/)
+  async remindMe(@Ctx() ctx: SceneCtx) {
+    const answer = getAnswer(ctx.update);
+
+    if (!answer || !answer.startsWith('FIXTURE_REMIND_')) {
+      return;
+    }
+
+    // const fixture = Number(answer.split('FIXTURE_REMIND_')[1]);
+    await ctx.reply('Функціонал в розробці');
   }
 }
