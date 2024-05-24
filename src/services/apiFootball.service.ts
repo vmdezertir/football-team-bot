@@ -14,10 +14,12 @@ import {
   ITeamSquadResponse,
   ITeamResponse,
   ILeagueResponse,
+  IBookmakers,
 } from '@app/interfaces';
 import { ITeam } from '@app/interfaces';
 import { isAfter, isSameYear, format } from 'date-fns';
 import { AxiosCacheInstance, setupCache, CacheRequestConfig } from 'axios-cache-interceptor';
+import { ISetNameValue } from '@app/entities';
 @Injectable()
 export class ApiFootballService {
   private readonly logger = new Logger(ApiFootballService.name);
@@ -28,6 +30,7 @@ export class ApiFootballService {
   constructor(private readonly httpService: HttpService) {
     this.axiosInstance = setupCache(this.httpService.axiosRef);
     this.oneHourCache = 1000 * 60 * 60;
+    // Recommended Calls : 1 call per day. But we will reduce it to 12 hour
     this.oneDayCache = 1000 * 60 * 720;
   }
 
@@ -155,12 +158,53 @@ export class ApiFootballService {
     });
   }
 
-  async findFixtureOdds(fixture: number, bet: number, page: number | undefined = 1) {
-    return this.getRequest<IFixtureOddsResponse[]>(`/odds?bet=${bet}&fixture=${fixture}&page=${page}`, {
+  async findFixtureOdds(fixture: number, bets: ISetNameValue[], bookmakers: ISetNameValue[]) {
+    let promises = [];
+    const reqConfig = {
       cache: {
         ttl: this.oneHourCache,
       },
-    });
+    };
+    for (const bookmaker of bookmakers) {
+      for (const bet of bets) {
+        const request = this.getRequest<IFixtureOddsResponse[]>(
+          `/odds?bet=${bet.id}&bookmaker=${bookmaker.id}&fixture=${fixture}`,
+          reqConfig,
+        );
+        promises.push(request);
+      }
+    }
+
+    const data = await Promise.allSettled(promises);
+    const responses = data.reduce((acc, response) => {
+      if (response.status !== 'fulfilled') {
+        return acc;
+      }
+
+      const { value } = response as PromiseFulfilledResult<IFixtureOddsResponse[]>;
+      let bookmakers: IBookmakers[] = [];
+      for (const v of value) {
+        bookmakers = [...bookmakers, ...v.bookmakers];
+      }
+
+      acc = [...acc, ...bookmakers];
+
+      return acc;
+    }, [] as IBookmakers[]);
+
+    if (!responses) {
+      throw new Error(`All promises is rejected`);
+    }
+
+    console.log(responses);
+    return [];
+
+    // return responses.reduce((acc, response) => {
+    //   const bookmakers = flatten(response.map(({ bookmakers }) => bookmakers));
+    //   acc = [...acc, ...bookmakers];
+
+    //   return acc;
+    // }, []);
   }
 
   async findFixturePrediction(fixture: number): Promise<IFixturePredictionResponse[]> {

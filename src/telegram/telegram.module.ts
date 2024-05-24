@@ -7,11 +7,12 @@ import { AddTeamScene, FavoriteScene } from '@app/scenes';
 import { TelegramStartService } from '@app/telegram/telegram.service';
 import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
+
 import { HttpModule } from '@nestjs/axios';
 import { ApiFootballService } from '@app/services/apiFootball.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Favorite } from '@app/entities';
-import { FavoriteRepository } from '@app/repositories';
+import { Favorite, User } from '@app/entities';
+import { FavoriteRepository, UserRepository } from '@app/repositories';
 
 @Module({
   imports: [
@@ -43,9 +44,16 @@ import { FavoriteRepository } from '@app/repositories';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Favorite]),
+    TypeOrmModule.forFeature([User, Favorite]),
   ],
-  providers: [TelegramStartService, ApiFootballService, AddTeamScene, FavoriteScene, FavoriteRepository],
+  providers: [
+    TelegramStartService,
+    ApiFootballService,
+    AddTeamScene,
+    FavoriteScene,
+    FavoriteRepository,
+    UserRepository,
+  ],
 })
 @Update()
 export class TelegramModule {
@@ -64,5 +72,10 @@ export class TelegramModule {
   @Hears('🫶🏼 Улюблені')
   async enterFavoriteScene(ctx: SceneContext) {
     await ctx.scene.enter(EScenes.FAVORITE);
+  }
+
+  @Hears('🔄 Перезапустити')
+  async restart(ctx: SceneContext) {
+    await ctx.scene.reenter();
   }
 }

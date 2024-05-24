@@ -1,13 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Context, Markup } from 'telegraf';
-import { EComands } from '@app/enums';
+import { ECommands } from '@app/enums';
+import { UserRepository } from '@app/repositories';
 @Injectable()
 export class TelegramStartService {
+  private readonly logger = new Logger(TelegramStartService.name);
+
+  constructor(private readonly userRepository: UserRepository) {}
+
   async start(ctx: Context): Promise<void> {
+    const message = ctx.message;
+    if (!message) {
+      return;
+    }
+
+    this.logger.log('New user enter', message?.from);
+
     const commonMenu = [
-      [Markup.button.callback('🤔 Вказати команду', EComands.ADD_TEAM)],
-      [Markup.button.callback('🫶🏼 Улюблені', EComands.SEE_FAVORITES)],
+      [Markup.button.callback('🤔 Вказати команду', ECommands.ADD_TEAM)],
+      [Markup.button.callback('🫶🏼 Улюблені', ECommands.SEE_FAVORITES)],
+      [Markup.button.callback('🔄 Перезапустити', ECommands.RESTART)],
     ];
+
+    const { id, first_name, last_name, username, language_code } = message.from;
+    try {
+      await this.userRepository.insert({
+        telegramId: id,
+        name: `${first_name}${last_name ? ' ' + last_name : ''}`,
+        userName: username,
+        language: language_code,
+      });
+    } catch (err) {
+      this.logger.log('Повторний вхід');
+      await ctx.replyWithHTML(
+        `<b>Вітаємо з поверненням на поле!</b>\nГотовий до нового матчу? Якщо потрібна порада чи підтримка, просто підбий мʼяча та запитай. Давайте рухатися до перемоги разом! 👇`,
+        Markup.keyboard(commonMenu),
+      );
+      return;
+    }
 
     await ctx.replyWithHTML(
       `<b>Вітаємо тебе у світі футбольних емоцій, новий друже! 👋</b>

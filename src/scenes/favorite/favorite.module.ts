@@ -1,24 +1,26 @@
-import { EScenes } from '@app/enums';
-import { FavoriteRepository } from '@app/repositories';
+import { ECallbacks, EScenes } from '@app/enums';
+import { FavoriteRepository, UserRepository } from '@app/repositories';
 import { ApiFootballService } from '@app/services';
 import { Injectable, Logger } from '@nestjs/common';
 import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
 import { Scenes } from '@app/@types/custom';
 import { Markup } from 'telegraf';
 import {
-  getAnswer,
+  getAnswerIdentifiers,
   getFavoriteTeamButtons,
+  getFixtureButtons,
   getLeagueTypeEmoji,
   getPlayerPositionEmoji,
+  getTeamButtons,
   getTeamLeagueButtons,
   getUserId,
   renderApiError,
-  renderError,
   renderLoading,
 } from '@app/utils';
 import { EPlayerPosition } from '@app/interfaces';
 import { format } from 'date-fns/format';
 import { uk as ukLocale } from 'date-fns/locale/uk';
+import { MESSAGE_STR_SEPARATOR } from '@app/const';
 
 interface SceneData {
   teamId?: number;
@@ -30,6 +32,7 @@ type SceneCtx = Scenes.SContext<SceneData>;
 export class FavoriteScene {
   constructor(
     private readonly footballService: ApiFootballService,
+    private readonly userRepository: UserRepository,
     private readonly repository: FavoriteRepository,
   ) {}
 
@@ -37,20 +40,30 @@ export class FavoriteScene {
 
   @SceneEnter()
   async start(@Ctx() ctx: SceneCtx) {
-    await renderLoading(ctx);
     const userId = getUserId(ctx);
     if (!userId) return;
 
-    const teams = await this.repository.findBy({ userId });
-    if (!teams.length) {
-      await ctx.editMessageText(
-        '🔍 У тебе ще відсутні улюблені команди\n Будь ласка, вкажи свої улюблені команди\n Вибери відповідний пункт меню! 👇',
+    const user = await this.userRepository.findOne({
+      where: { telegramId: userId },
+      select: { favorites: true },
+      relations: { favorites: true },
+    });
+    if (!user) {
+      return;
+    }
+
+    const { favorites } = user;
+    if (!favorites.length) {
+      await ctx.replyWithHTML(
+        '🔍 У тебе ще відсутні улюблені команди\n Будь ласка, вкажи свої улюблені команди\n\n<i>Вибери відповідний пункт меню</i>! 👇',
         { parse_mode: 'HTML' },
       );
       return;
     }
 
-    const menu = Markup.inlineKeyboard(getFavoriteTeamButtons(teams));
+    this.logger.log(favorites);
+
+    const menu = Markup.inlineKeyboard(getFavoriteTeamButtons(favorites));
     await ctx.replyWithHTML(
       'Ocь список найкращих команд світу, без перебільшення😉\n По якій команді потрібна інформація? 👇',
       menu,
@@ -58,37 +71,31 @@ export class FavoriteScene {
     return;
   }
 
-  @Action(/^FAVORITE_TEAM_/)
+  @Action(new RegExp(`^${ECallbacks.FAVORITE_TEAM}`))
   async chooseTeam(@Ctx() ctx: SceneCtx) {
-    const answer = getAnswer(ctx.update);
+    const [id] = getAnswerIdentifiers(ctx.update);
 
-    if (!answer || !answer.startsWith('FAVORITE_TEAM_')) {
+    if (!id) {
       return;
     }
 
-    const uuid = answer.split('FAVORITE_TEAM_')[1];
-    const team = await this.repository.findOneById(uuid);
+    const team = await this.repository.findOneById(id);
 
     if (!team) {
-      await renderError(ctx);
       return;
     }
 
-    ctx.scene.state = { ...ctx.scene.state, teamId: team.id };
+    ctx.scene.state = { ...ctx.scene.state, teamId: team.apiId };
 
     await ctx.replyWithHTML(
       `🧑🏽‍🤝‍🧑🏻 <b>${team.name}</b>
     \n👇 Що саме тебе цікавить?`,
-      Markup.inlineKeyboard([
-        [Markup.button.callback('👨‍👨 Склад команди', 'TEAM_SQUAD')],
-        [Markup.button.callback('📊 Статистика', 'TEAM_STATS')],
-        [Markup.button.callback('⚔️ Найближчі 5 матчів', 'TEAM_FIXTURES')],
-      ]),
+      Markup.inlineKeyboard(getTeamButtons()),
     );
     return;
   }
 
-  @Action('TEAM_SQUAD')
+  @Action(ECallbacks.TEAM_SQUAD)
   async getSquad(@Ctx() ctx: SceneCtx) {
     const { teamId } = ctx.scene.state;
 
@@ -123,7 +130,7 @@ export class FavoriteScene {
       await ctx.replyWithHTML(`👨🏻 Тренер\n<b>${coach.name}</b>. 🏁<i>${coach.nationality}</i> (${coach.age} p.)`);
   }
 
-  @Action('TEAM_STATS')
+  @Action(ECallbacks.TEAM_STATS)
   async getStats(@Ctx() ctx: SceneCtx) {
     const { teamId } = ctx.scene.state;
 
@@ -131,7 +138,6 @@ export class FavoriteScene {
       return;
     }
 
-    await renderLoading(ctx);
     let leagues;
 
     try {
@@ -156,7 +162,7 @@ export class FavoriteScene {
     }
   }
 
-  @Action('TEAM_FIXTURES')
+  @Action(ECallbacks.TEAM_FIXTURES)
   async getFixtures(@Ctx() ctx: SceneCtx) {
     const { teamId } = ctx.scene.state;
 
@@ -164,7 +170,6 @@ export class FavoriteScene {
       return;
     }
 
-    await renderLoading(ctx);
     let fixtures;
     try {
       fixtures = await this.footballService.findTeamFeatureGames(teamId);
@@ -190,43 +195,55 @@ export class FavoriteScene {
       }
 
       res = `${res}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(fixture.date, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (UTC)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
-      const menu = [
-        [
-          Markup.button.callback('🎲 Коефіцієнти', `FIXTURE_ODDS_${fixture.id}`),
-          Markup.button.callback('🔮 Прогноз', `FIXTURE_PRED_${fixture.id}`),
-        ],
-        [Markup.button.callback('🔔 Сповістити про початок', `FIXTURE_REMIND_${fixture.id}`)],
-      ];
+      const menu = getFixtureButtons(fixture.id);
       await ctx.replyWithHTML(res, Markup.inlineKeyboard(menu));
     }
   }
 
-  @Action(/^FIXTURE_ODDS_/)
+  @Action(new RegExp(`^${ECallbacks.FIXTURE_ODDS}`))
   async getOdds(@Ctx() ctx: SceneCtx) {
-    const answer = getAnswer(ctx.update);
+    const userId = getUserId(ctx);
+    const [fixture] = getAnswerIdentifiers(ctx.update);
 
-    if (!answer || !answer.startsWith('FIXTURE_ODDS_')) {
+    if (!fixture || !userId) {
       return;
     }
 
-    // const fixture = Number(answer.split('FIXTURE_ODDS_')[1]);
     await renderLoading(ctx);
+
+    const user = await this.userRepository.findOne({
+      where: { telegramId: userId },
+      select: ['id', 'settings'],
+    });
+
+    if (!user) {
+      return;
+    }
+    let odds;
+
+    const { settings } = user;
+    try {
+      odds = await this.footballService.findFixtureOdds(Number(fixture), settings.bets, settings.bookmakers);
+    } catch (error) {
+      this.logger.error(error);
+      renderApiError(ctx);
+      return;
+    }
   }
 
-  @Action(/^FIXTURE_PRED_/)
+  @Action(new RegExp(`^${ECallbacks.FIXTURE_PRED}`))
   async getPredictions(@Ctx() ctx: SceneCtx) {
-    const answer = getAnswer(ctx.update);
+    const [fixture] = getAnswerIdentifiers(ctx.update);
+    this.logger.log(`${ECallbacks.FIXTURE_PRED} fixture: ${fixture}`);
 
-    if (!answer || !answer.startsWith('FIXTURE_PRED_')) {
+    if (!fixture) {
       return;
     }
 
-    const fixture = Number(answer.split('FIXTURE_PRED_')[1]);
-    await renderLoading(ctx);
     let predictionData;
 
     try {
-      predictionData = await this.footballService.findFixturePrediction(fixture);
+      predictionData = await this.footballService.findFixturePrediction(Number(fixture));
     } catch (err) {
       this.logger.error(err);
       renderApiError(ctx);
@@ -240,26 +257,26 @@ export class FavoriteScene {
     for (const { predictions, teams } of predictionData) {
       const { advice, percent, winner, under_over, goals } = predictions;
       await ctx.replyWithHTML(`
-        <b>Вірогідність перемоги в матчі ${teams.home.name} ⚔️ ${teams.away.name}</b>:
+        ${MESSAGE_STR_SEPARATOR}
+        \n<b>Вірогідність перемоги в матчі ${teams.home.name} ⚔️ ${teams.away.name}</b>:
         \n1️⃣ ${percent.home} 🤝 ${percent.draw} 2️⃣ ${percent.away}
-        \n💪 <b>Вірогідний переможець</b>: ${winner.name} (<i>${winner.comment}</i>)
-        \n↕️ <b>Під/Над</b>: ${under_over}*
-        \n⚽︎ <b>Голи вдома</b>: ${goals.home}*
-        \n⚽︎ <b>Голи в гостях</b>: ${goals.away}*
-        \n☝ <b>Порада</b>: ${advice}
+        \n💪 Вірогідний переможець: <b>${winner.name}</b> (<i>${winner.comment}</i>)
+        \n↕️ Під/Над: <b>${under_over}</b>*
+        \n⚽ Голи господарів: <b>${goals.home}</b>*
+        \n⚽︎ Голи гостей: <b>${goals.away}</b>*
+        \n💡 Порада: <b>${advice}</b>
         \n\n* Наприклад -1.5 означає, що в матчі буде максимум 1.5 голів, тобто 1 гол.`);
     }
   }
 
-  @Action(/^FIXTURE_REMIND_/)
+  @Action(new RegExp(`^${ECallbacks.FIXTURE_REMIND}`))
   async remindMe(@Ctx() ctx: SceneCtx) {
-    const answer = getAnswer(ctx.update);
+    const [fixture] = getAnswerIdentifiers(ctx.update);
 
-    if (!answer || !answer.startsWith('FIXTURE_REMIND_')) {
+    if (!fixture) {
       return;
     }
 
-    // const fixture = Number(answer.split('FIXTURE_REMIND_')[1]);
     await ctx.reply('Функціонал в розробці');
   }
 }

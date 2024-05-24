@@ -1,22 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Scene, SceneEnter, Ctx, Action } from 'nestjs-telegraf';
-import { EScenes } from '@app/enums';
+import { ECallbacks, EScenes } from '@app/enums';
 import {
   getAnswer,
+  getAnswerIdentifiers,
+  getChooseTeamButtons,
   getCountriesButtons,
   getLeagueButtons,
-  getTeamButtons,
+  getSaveTeamButtons,
+  getTeamsButtons,
   getUserId,
   renderApiError,
-  renderLoading,
 } from '@app/utils';
 import { Markup } from 'telegraf';
 import { ApiFootballService } from '@app/services/apiFootball.service';
 import { ITeam } from '@app/interfaces/team';
 import { Scenes } from '@app/@types/custom';
 import { ILeague } from '@app/interfaces';
-import { FavoriteRepository } from '@app/repositories';
+import { FavoriteRepository, UserRepository } from '@app/repositories';
 import { error } from 'console';
+import { SEPARATOR } from '@app/const';
 
 interface SceneData {
   teams?: ITeam[];
@@ -33,6 +36,7 @@ type SceneCtx = Scenes.SContext<SceneData>;
 export class AddTeamScene {
   constructor(
     private readonly footballService: ApiFootballService,
+    private readonly userRepository: UserRepository,
     private readonly repository: FavoriteRepository,
   ) {}
 
@@ -42,20 +46,43 @@ export class AddTeamScene {
   async start(@Ctx() ctx: SceneCtx) {
     const menu = Markup.inlineKeyboard(getCountriesButtons());
     await ctx.replyWithHTML(
-      'Запрошую тебе на захоплюючу подорож у світ футбольних емоцій!\nСпершу, давай оберемо країну, яка цікавить. Представ собі величні гори Швейцарії, спокійні води Голландії чи маєтність історії в Іспанії.\nПодумай про свої вподобання та відчуйте магію вибору.',
+      'Запрошую тебе на захоплюючу подорож у світ футбольних емоцій!\nСпершу, давай оберемо країну, яка цікавить. Представ собі величні гори 🏔️ Швейцарії, спокійні води 🌊 Голландії чи маєтність 🏰 історії в Іспанії.\n🤔 Подумай про свої вподобання та відчуйте магію вибору. 👇',
       menu,
     );
     return;
   }
 
-  @Action('COUNTRIES')
+  @Action(ECallbacks.COUNTRIES)
   async chooseCountries(@Ctx() ctx: SceneCtx) {
     const menu = Markup.inlineKeyboard(getCountriesButtons());
     await ctx.replyWithHTML('Обирай країну?', menu);
     return;
   }
 
-  @Action(/^COUNTRY_/)
+  @Action(new RegExp(`^${ECallbacks.COUNTRY_PAGE}`))
+  async scrollCountries(@Ctx() ctx: SceneCtx) {
+    const answer = getAnswer(ctx.update);
+    this.logger.log(`${ECallbacks.COUNTRY_PAGE} answer: ${answer}`);
+
+    if (!answer) {
+      return;
+    }
+
+    let buttons = [];
+
+    const [page] = getAnswerIdentifiers(ctx.update);
+
+    this.logger.log(`country page: ${page}`);
+
+    if (!page) {
+      return;
+    }
+
+    buttons = getCountriesButtons(Number(page));
+    await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
+  }
+
+  @Action(new RegExp(`^${ECallbacks.COUNTRY}`))
   async chooseCountry(@Ctx() ctx: SceneCtx) {
     const answer = getAnswer(ctx.update);
 
@@ -65,19 +92,20 @@ export class AddTeamScene {
 
     let buttons = [];
 
-    if (answer.startsWith('COUNTRY_PAGE_')) {
-      const page = Number(answer.split('COUNTRY_PAGE_')[1] || 0);
-      buttons = getCountriesButtons(page);
-      await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
+    const [code] = getAnswerIdentifiers(ctx.update);
+
+    this.logger.log(`country code: ${code}`);
+
+    if (!code) {
       return;
     }
 
-    const countryCode = answer.split('COUNTRY_')[1];
-    await renderLoading(ctx);
     let leagues;
+    ctx.scene.state = { ...ctx.scene.state, country: code };
 
     try {
-      leagues = await this.footballService.findAllLeaguesByCountry(countryCode);
+      leagues = await this.footballService.findAllLeaguesByCountry(code);
+      ctx.scene.state = { ...ctx.scene.state, leagues };
     } catch (err) {
       this.logger.error(err);
       renderApiError(ctx);
@@ -85,38 +113,31 @@ export class AddTeamScene {
     }
 
     if (!leagues || !leagues.length) {
-      await ctx.editMessageText('Нажаль, нічого не знайшов. Спробуй іншу країну');
-      const buttons = getCountriesButtons();
-      await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
+      await ctx.replyWithHTML(`🤷‍♂️ Нажаль, нічого не знайшов по <b>${code}</b>. Спробуй іншу країну`);
       return;
     }
 
-    ctx.scene.state = { country: countryCode, leagues };
-    await ctx.editMessageText(
-      `Чудово. Тепер, коли ми обрали країну <b>(${countryCode})</b>, час зануритися у її футбольну атмосферу. Уяви собі гучні трибуни, яскраві фанатські хореографії та енергію гри. Звук сирен та вибухи радощів заповнюють повітря.\n<b>Що скажеш на рахунок 🏆 ліги?</b>`,
-      { parse_mode: 'HTML' },
+    buttons = [[Markup.button.callback('⬅️ Назад', ECallbacks.COUNTRIES)], ...getLeagueButtons(leagues)];
+
+    await ctx.replyWithHTML(
+      `Чудово. Тепер, коли ми обрали країну <b>(${code})</b>, час зануритися у її футбольну атмосферу. Уяви собі гучні трибуни 🏟, яскраві фанатські хореографії 💃 та енергію ⚡️ гри. 🎊 Звук сирен та вибухи радощів заповнюють повітря.\n<b>Що скажеш на рахунок 🏆 ліги?</b>`,
+      Markup.inlineKeyboard(buttons),
     );
-    buttons = getLeagueButtons(leagues);
-    if (buttons.length) {
-      await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
-    }
     return;
   }
 
-  @Action(/^LEAGUE_/)
+  @Action(new RegExp(`^${ECallbacks.LEAGUE}`))
   async chooseLeague(@Ctx() ctx: SceneCtx) {
-    const answer = getAnswer(ctx.update);
-
-    if (!answer || !answer.startsWith('LEAGUE_')) {
+    const [leagueId] = getAnswerIdentifiers(ctx.update);
+    if (!leagueId) {
       return;
     }
-    const leagueId = Number(answer.split('LEAGUE_')[1] || 0);
-    ctx.scene.state = { ...ctx.scene.state, league: leagueId };
-    await renderLoading(ctx);
+
+    ctx.scene.state = { ...ctx.scene.state, league: Number(leagueId) };
     let teams;
 
     try {
-      teams = await this.footballService.findAllTeamsByLeague(leagueId);
+      teams = await this.footballService.findAllTeamsByLeague(Number(leagueId));
     } catch (err) {
       this.logger.error(err);
       renderApiError(ctx);
@@ -125,101 +146,86 @@ export class AddTeamScene {
     ctx.scene.state = { ...ctx.scene.state, teams };
 
     if (!teams || !teams.length) {
-      await ctx.editMessageText('🔍 Нажаль, нічого не знайшов. Спробуй іншу 🏆 лігу');
       const { leagues } = ctx.scene.state;
       const buttons = getLeagueButtons(leagues);
-      if (buttons.length) {
-        await ctx.editMessageReplyMarkup({ inline_keyboard: buttons });
-      }
+      await ctx.replyWithHTML('🔍 Нажаль, нічого не знайшов. Спробуй іншу 🏆 лігу', Markup.inlineKeyboard(buttons));
       return;
     }
 
     const { country } = ctx.scene.state;
 
-    await ctx.editMessageText(
-      `Нарешті, настав час обрати саму команду, яка стане твоїм футбольним провідником у цій захоплюючій подорожі. Це момент, коли ти відчуваєш справжнє співчуття та пристрасть до обраної команди. \n<b>Чи вибереш ти традиційно сильну команду з багаторічною історією, чи підтримаєш молоду та амбіційну команду, яка лише починає свій шлях до слави?</b>`,
-      { parse_mode: 'HTML' },
+    const buttons = getTeamsButtons(teams);
+
+    await ctx.replyWithHTML(
+      `Нарешті, настав час обрати саму команду, яка стане твоїм футбольним провідником у цій захоплюючій подорожі ✈️. Це момент, коли ти відчуваєш справжнє співчуття та пристрасть до обраної команди. \n❤️ <b>Чи вибереш ти традиційно сильну команду з багаторічною історією, чи підтримаєш молоду та амбіційну команду, яка лише починає свій шлях до слави?</b>`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ Назад', `${ECallbacks.COUNTRY}${SEPARATOR}${country}`)],
+        ...buttons,
+      ]),
     );
-    const buttons = getTeamButtons(teams);
-    await ctx.editMessageReplyMarkup({
-      inline_keyboard: [[Markup.button.callback('⬅️ Назад', `COUNTRY_${country}`)], ...buttons],
-    });
     return;
   }
 
-  @Action(/^TEAM_/)
+  @Action(new RegExp(`^${ECallbacks.TEAM}`))
   async chooseTeam(@Ctx() ctx: SceneCtx) {
-    const answer = getAnswer(ctx.update);
-
-    if (!answer || !answer.startsWith('TEAM_')) {
+    const [teamId] = getAnswerIdentifiers(ctx.update);
+    if (!teamId) {
       return;
     }
 
-    const teamId = Number(answer.split('TEAM_')[1] || 0);
-
     const { teams } = ctx.scene.state;
-    const team = teams ? teams.find(({ id }) => id == teamId) : null;
+    const team = teams ? teams.find(({ id }) => id == Number(teamId)) : null;
     ctx.scene.state = { ...ctx.scene.state, team };
 
     if (team) {
-      await ctx.editMessageText(
+      const { league } = ctx.scene.state;
+      if (!league) {
+        return;
+      }
+      const buttons = getChooseTeamButtons(league);
+      await ctx.replyWithHTML(
         `🥅 Чудовий вибір!
       \n <b>${team.name}</b> (${team.country})
       \n Клуб заснований: ${team.founded}`,
-        { parse_mode: 'HTML' },
+        Markup.inlineKeyboard(buttons),
       );
-      const { league } = ctx.scene.state;
-      await ctx.editMessageReplyMarkup({
-        inline_keyboard: [
-          [Markup.button.callback('⬅️ Назад 🏆', `LEAGUE_${league}`)],
-          [Markup.button.callback('До вибору країн', 'COUNTRIES')],
-          [Markup.button.callback('Зберегти', 'SAVE_TEAM')],
-        ],
-      });
     }
   }
 
-  @Action('SAVE_TEAM')
+  @Action(ECallbacks.SAVE_TEAM)
   async saveChoose(@Ctx() ctx: SceneCtx) {
     const userId = getUserId(ctx);
-    const { team, league } = ctx.scene.state;
+    const { team, league, country } = ctx.scene.state;
 
-    if (!team || !userId) return;
+    if (!team || !userId || !league) return;
 
     try {
+      const user = await this.userRepository.findOneBy({ telegramId: userId });
+      if (!user) {
+        return;
+      }
       await this.repository.insert({
-        userId,
+        userId: user.id,
         name: team.name,
-        countryCode: team.country,
-        id: team.id,
+        countryCode: country,
+        apiId: team.id,
       });
     } catch (err) {
       this.logger.error('Team save error:', error);
-      await ctx.editMessageText(
+      await ctx.replyWithHTML(
         `Команда <b>${team.name}</b> вже додана.\nВсі збережені команди можна побачити в меню "🫶🏼 Улюблені"`,
-        { parse_mode: 'HTML' },
+        Markup.inlineKeyboard(getSaveTeamButtons(league)),
       );
-      await ctx.editMessageReplyMarkup({
-        inline_keyboard: [
-          [Markup.button.callback('⬅️ Назад', `LEAGUE_${league}`)],
-          [Markup.button.callback('До вибору країн', 'COUNTRIES')],
-          [Markup.button.callback('Перейти до збережених', 'TO_FAVORITE')],
-        ],
-      });
       return;
     }
 
-    await ctx.editMessageText(`<b>${team.name}</b> додано до улюблених`, { parse_mode: 'HTML' });
-    await ctx.editMessageReplyMarkup({
-      inline_keyboard: [
-        [Markup.button.callback('⬅️ Назад', `LEAGUE_${league}`)],
-        [Markup.button.callback('До вибору країн', 'COUNTRIES')],
-        [Markup.button.callback('🫶🏼 Перейти до улюблених', 'TO_FAVORITE')],
-      ],
-    });
+    await ctx.replyWithHTML(
+      `<b>${team.name}</b> додано до улюблених`,
+      Markup.inlineKeyboard(getSaveTeamButtons(league)),
+    );
   }
 
-  @Action('TO_FAVORITE')
+  @Action(ECallbacks.TO_FAVORITE)
   async goToFavorite(@Ctx() ctx: SceneCtx) {
     await ctx.scene.enter(EScenes.FAVORITE);
   }
