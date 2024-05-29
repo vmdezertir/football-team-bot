@@ -54,18 +54,11 @@ export const getFavoriteTeamButtons = (teams: Favorite[]) =>
     Markup.button.callback(`${name} (${countryCode})`, `${ECallbacks.FAVORITE_TEAM}${SEPARATOR}${id}`),
   ]);
 
-export const getTeamLeagueButtons = (leagueId: number, season: number) => [
+export const getTeamLeagueButtons = (leagueId: number, season: number, path?: string) => [
+  [Markup.button.webApp('🏆 Турнірна таблиця', `${path}/widgets/standings/${leagueId}?season=${season}`)],
   [
-    Markup.button.webApp(
-      'Турнірна таблиця',
-      `https://1d34-188-163-21-111.ngrok-free.app/widgets/standings/${leagueId}?season=${season}`,
-    ),
-  ],
-  [
-    Markup.button.webApp(
-      'Матчі',
-      `https://1d34-188-163-21-111.ngrok-free.app/widgets/games/${leagueId}?season=${season}`,
-    ),
+    Markup.button.webApp('📋 Статистика', `${path}/widgets/standings/${leagueId}/stats?season=${season}`),
+    Markup.button.webApp('⚔️ Матчі', `${path}/widgets/games/${leagueId}?season=${season}`),
   ],
 ];
 
@@ -77,9 +70,9 @@ export const getTeamButtons = () => [
   [Markup.button.callback('⚔️ Найближчі 5 матчів', ECallbacks.TEAM_FIXTURES)],
 ];
 
-export const getFixtureButtons = (fixture: number) => [
+export const getFixtureButtons = (fixture: number, user: number, path?: string) => [
   [
-    Markup.button.callback('🎲 Коефіцієнти', `${ECallbacks.FIXTURE_ODDS}${SEPARATOR}${fixture}`),
+    Markup.button.webApp('🎲 Коефіцієнти', `${path}/widgets/fixture/${fixture}/odds?user=${user}`),
     Markup.button.callback('🔮 Прогноз', `${ECallbacks.FIXTURE_PRED}${SEPARATOR}${fixture}`),
   ],
   [Markup.button.callback('🔔 Сповістити про початок', `${ECallbacks.FIXTURE_REMIND}${SEPARATOR}${fixture}`)],

@@ -14,12 +14,13 @@ import {
   ITeamSquadResponse,
   ITeamResponse,
   ILeagueResponse,
-  IBookmakers,
+  IPlayersStatsResponse,
+  IPlayerStatsWidgetContent,
 } from '@app/interfaces';
 import { ITeam } from '@app/interfaces';
 import { isAfter, isSameYear, format } from 'date-fns';
 import { AxiosCacheInstance, setupCache, CacheRequestConfig } from 'axios-cache-interceptor';
-import { ISetNameValue } from '@app/entities';
+
 @Injectable()
 export class ApiFootballService {
   private readonly logger = new Logger(ApiFootballService.name);
@@ -158,53 +159,25 @@ export class ApiFootballService {
     });
   }
 
-  async findFixtureOdds(fixture: number, bets: ISetNameValue[], bookmakers: ISetNameValue[]) {
-    let promises = [];
-    const reqConfig = {
+  async findFixtureOdds(fixture: number) {
+    const response = await this.getRequest<IFixtureOddsResponse[]>(`/odds?fixture=${fixture}`, {
       cache: {
         ttl: this.oneHourCache,
       },
-    };
-    for (const bookmaker of bookmakers) {
-      for (const bet of bets) {
-        const request = this.getRequest<IFixtureOddsResponse[]>(
-          `/odds?bet=${bet.id}&bookmaker=${bookmaker.id}&fixture=${fixture}`,
-          reqConfig,
-        );
-        promises.push(request);
-      }
+    });
+
+    if (!response) {
+      return [];
     }
 
-    const data = await Promise.allSettled(promises);
-    const responses = data.reduce((acc, response) => {
-      if (response.status !== 'fulfilled') {
-        return acc;
-      }
+    const bookmakersData = response[0]?.bookmakers;
 
-      const { value } = response as PromiseFulfilledResult<IFixtureOddsResponse[]>;
-      let bookmakers: IBookmakers[] = [];
-      for (const v of value) {
-        bookmakers = [...bookmakers, ...v.bookmakers];
-      }
-
-      acc = [...acc, ...bookmakers];
-
-      return acc;
-    }, [] as IBookmakers[]);
-
-    if (!responses) {
-      throw new Error(`All promises is rejected`);
+    if (!bookmakersData) {
+      this.logger.error(`No found bookmakers data inside response`);
+      return [];
     }
 
-    console.log(responses);
-    return [];
-
-    // return responses.reduce((acc, response) => {
-    //   const bookmakers = flatten(response.map(({ bookmakers }) => bookmakers));
-    //   acc = [...acc, ...bookmakers];
-
-    //   return acc;
-    // }, []);
+    return bookmakersData;
   }
 
   async findFixturePrediction(fixture: number): Promise<IFixturePredictionResponse[]> {
@@ -213,5 +186,29 @@ export class ApiFootballService {
         ttl: this.oneHourCache,
       },
     });
+  }
+
+  async findLeagueStats(leagueId: number, season: number) {
+    const paths = ['topscorers', 'topassists', 'topyellowcards', 'topredcards'];
+    const promises = paths.map(path =>
+      this.getRequest<IPlayersStatsResponse[]>(`/players/${path}?league=${leagueId}&season=${season}`, {
+        cache: {
+          ttl: this.oneDayCache,
+        },
+      }),
+    );
+    const data = await Promise.allSettled(promises);
+
+    this.logger.log('data', data);
+
+    return data.reduce((acc, response, cIndex) => {
+      if (response.status !== 'fulfilled') {
+        return acc;
+      }
+      const { value } = response as PromiseFulfilledResult<IPlayersStatsResponse[]>;
+      const key = paths[cIndex];
+      acc[key] = value;
+      return acc;
+    }, {} as IPlayerStatsWidgetContent);
   }
 }

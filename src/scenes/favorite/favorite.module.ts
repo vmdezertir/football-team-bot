@@ -21,6 +21,7 @@ import { EPlayerPosition } from '@app/interfaces';
 import { format } from 'date-fns/format';
 import { uk as ukLocale } from 'date-fns/locale/uk';
 import { MESSAGE_STR_SEPARATOR } from '@app/const';
+import { ConfigService } from '@nestjs/config';
 
 interface SceneData {
   teamId?: number;
@@ -34,6 +35,7 @@ export class FavoriteScene {
     private readonly footballService: ApiFootballService,
     private readonly userRepository: UserRepository,
     private readonly repository: FavoriteRepository,
+    private readonly configService: ConfigService,
   ) {}
 
   private readonly logger = new Logger(FavoriteScene.name);
@@ -155,8 +157,11 @@ export class FavoriteScene {
 
     await ctx.reply('Що саме тебе цікавить? 👇');
 
+    const path = this.configService.get<string>('BOT_API_URL');
+
     for (const { league, seasons } of leagues) {
-      const menu = getTeamLeagueButtons(league.id, seasons[0].year);
+      this.logger.log('league seasons', seasons);
+      const menu = getTeamLeagueButtons(league.id, seasons[0].year, path);
       const icon = getLeagueTypeEmoji(league.type);
       await ctx.replyWithHTML(`${icon} <b>${league.type}. ${league.name}</b>`, Markup.inlineKeyboard(menu));
     }
@@ -165,8 +170,18 @@ export class FavoriteScene {
   @Action(ECallbacks.TEAM_FIXTURES)
   async getFixtures(@Ctx() ctx: SceneCtx) {
     const { teamId } = ctx.scene.state;
+    const userId = getUserId(ctx);
 
-    if (!teamId) {
+    if (!teamId || !userId) {
+      return;
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { telegramId: userId },
+      select: ['id'],
+    });
+
+    if (!user) {
       return;
     }
 
@@ -184,6 +199,8 @@ export class FavoriteScene {
       return;
     }
 
+    const path = this.configService.get<string>('BOT_API_URL');
+
     for (const [index, { teams, league, fixture }] of Object.entries(fixtures)) {
       const currentIndex = Number(index);
       let res = '';
@@ -195,39 +212,8 @@ export class FavoriteScene {
       }
 
       res = `${res}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(fixture.date, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (UTC)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
-      const menu = getFixtureButtons(fixture.id);
+      const menu = getFixtureButtons(fixture.id, user.id, path);
       await ctx.replyWithHTML(res, Markup.inlineKeyboard(menu));
-    }
-  }
-
-  @Action(new RegExp(`^${ECallbacks.FIXTURE_ODDS}`))
-  async getOdds(@Ctx() ctx: SceneCtx) {
-    const userId = getUserId(ctx);
-    const [fixture] = getAnswerIdentifiers(ctx.update);
-
-    if (!fixture || !userId) {
-      return;
-    }
-
-    await renderLoading(ctx);
-
-    const user = await this.userRepository.findOne({
-      where: { telegramId: userId },
-      select: ['id', 'settings'],
-    });
-
-    if (!user) {
-      return;
-    }
-    let odds;
-
-    const { settings } = user;
-    try {
-      odds = await this.footballService.findFixtureOdds(Number(fixture), settings.bets, settings.bookmakers);
-    } catch (error) {
-      this.logger.error(error);
-      renderApiError(ctx);
-      return;
     }
   }
 
@@ -263,7 +249,7 @@ export class FavoriteScene {
         \n💪 Вірогідний переможець: <b>${winner.name}</b> (<i>${winner.comment}</i>)
         \n↕️ Під/Над: <b>${under_over}</b>*
         \n⚽ Голи господарів: <b>${goals.home}</b>*
-        \n⚽︎ Голи гостей: <b>${goals.away}</b>*
+        \n⚽ Голи гостей: <b>${goals.away}</b>*
         \n💡 Порада: <b>${advice}</b>
         \n\n* Наприклад -1.5 означає, що в матчі буде максимум 1.5 голів, тобто 1 гол.`);
     }

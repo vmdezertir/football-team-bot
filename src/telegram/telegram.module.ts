@@ -3,7 +3,7 @@ import { Hears, Start, TelegrafModule, Update } from 'nestjs-telegraf';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Postgres } from '@telegraf/session/pg';
 import { Context, session } from 'telegraf';
-import { AddTeamScene, FavoriteScene } from '@app/scenes';
+import { AddTeamScene, FavoriteScene, SettingsScene } from '@app/scenes';
 import { TelegramStartService } from '@app/telegram/telegram.service';
 import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
@@ -47,9 +47,11 @@ import { FavoriteRepository, UserRepository } from '@app/repositories';
     TypeOrmModule.forFeature([User, Favorite]),
   ],
   providers: [
+    ConfigService,
     TelegramStartService,
     ApiFootballService,
     AddTeamScene,
+    SettingsScene,
     FavoriteScene,
     FavoriteRepository,
     UserRepository,
@@ -72,6 +74,11 @@ export class TelegramModule {
   @Hears('🫶🏼 Улюблені')
   async enterFavoriteScene(ctx: SceneContext) {
     await ctx.scene.enter(EScenes.FAVORITE);
+  }
+
+  @Hears('🛠️ Налаштування')
+  async enterSettingsScene(ctx: SceneContext) {
+    await ctx.scene.enter(EScenes.SETTINGS);
   }
 
   @Hears('🔄 Перезапустити')

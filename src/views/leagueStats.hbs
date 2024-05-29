@@ -1,0 +1,175 @@
+<html lang='uk'>
+<head>
+  <meta charset='utf-8' />
+  <title>League stats</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous" />
+  <style>
+    img.img-thumbnail {
+      width: 40px;
+      height: 40px;
+    }
+
+    .block_info {
+      width: 45px;
+    }
+  </style>
+</head>
+<body>
+<div class="card m-2">
+  <nav class="card-header">
+    <div class="nav nav-tabs d-flex flex-nowrap overflow-x-scroll" id="nav-tab" role="tablist">
+      {{#each tabs as |tab|}}
+        <button class="nav-link {{#unless @index}}active{{/unless}}" data-bs-toggle="tab"
+                data-bs-target="#nav-{{@index}}" type="button" role="tab">{{tab}}</button>
+      {{/each}}
+    </div>
+  </nav>
+  <div class="card-body tab-content">
+    <div class="tab-pane fade show active bg-body rounded shadow-sm" id="nav-0" role="tabpanel" tabindex="0">
+      <div class="my-3 py-3 bg-light-subtle sticky-top">
+        <div class="d-flex border-bottom justify-content-between">
+          <div>
+            <strong class="pb-2 mb-0 me-2">№</strong>
+            <strong class="pb-2 mb-0">Гравець</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="d-flex justify-content-center block_info">Г (п)</span>
+            <span class="d-flex justify-content-center block_info">А</span>
+            <span class="d-flex justify-content-center block_info">І</span>
+          </div>
+        </div>
+      </div>
+      {{#each contents.topscorers as |scorer|}}
+        <div class="d-flex text-body-secondary pt-3">
+          <strong class="text-gray-dark me-2">#{{@index}}</strong>
+          <img src="{{scorer.player.photo}}" class="img-thumbnail rounded">
+          <div class="pb-3 mb-0 small lh-sm border-bottom w-100 ms-2">
+            <div class="d-flex justify-content-between">
+              <strong class="text-gray-dark">{{scorer.player.name}} ({{scorer.player.age}} р.)</strong>
+              <div class="d-flex justify-content-between">
+                <span
+                  class="d-flex justify-content-center block_info"><strong>{{scorer.statistics.0.goals.total}}</strong> ({{scorer.statistics.0.penalty.scored}}
+                  )</span>
+                <span class="d-flex justify-content-center block_info">{{scorer.statistics.0.goals.assists}}</span>
+                <span class="d-flex justify-content-center block_info">{{scorer.statistics.0.games.appearences}}</span>
+              </div>
+            </div>
+            <span class="d-block">{{scorer.statistics.0.team.name}}</span>
+          </div>
+        </div>
+      {{/each}}
+      <p class="mt-4"><small><strong>Г (п)</strong>: голи (з пенальті), <strong>А</strong>: гольові передачі,
+        <strong>І</strong>: зіграні матчі</small></p>
+    </div>
+    <div class="tab-pane fade bg-body rounded shadow-sm" id="nav-1" role="tabpanel" tabindex="0">
+      <div class="my-3 py-3 bg-light-subtle sticky-top">
+        <div class="d-flex border-bottom justify-content-between">
+          <div>
+            <strong class="pb-2 mb-0 me-2">№</strong>
+            <strong class="pb-2 mb-0">Гравець</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="d-flex justify-content-center block_info">А</span>
+            <span class="d-flex justify-content-center block_info">Г</span>
+            <span class="d-flex justify-content-center block_info">І</span>
+          </div>
+        </div>
+      </div>
+      {{#each contents.topassists as |assist|}}
+        <div class="d-flex text-body-secondary pt-3">
+          <strong class="text-gray-dark me-2">#{{@index}}</strong>
+          <img src="{{assist.player.photo}}" class="img-thumbnail rounded">
+          <div class="pb-3 mb-0 small lh-sm border-bottom w-100 ms-2">
+            <div class="d-flex justify-content-between">
+              <strong class="text-gray-dark">{{assist.player.name}} ({{assist.player.age}} р.)</strong>
+              <div class="d-flex justify-content-between">
+                <span
+                  class="d-flex justify-content-center block_info"><strong>{{assist.statistics.0.goals.assists}}</strong></span>
+                <span class="d-flex justify-content-center block_info">{{assist.statistics.0.goals.total}}</span>
+                <span class="d-flex justify-content-center block_info">{{assist.statistics.0.games.appearences}}</span>
+              </div>
+            </div>
+            <span class="d-block">{{assist.statistics.0.team.name}}</span>
+          </div>
+        </div>
+      {{/each}}
+      <p class="mt-4"><small><strong>Г (п)</strong>: голи (з пенальті), <strong>А</strong>: гольові передачі,
+        <strong>І</strong>: зіграні матчі</small></p>
+    </div>
+    <div class="tab-pane fade bg-body rounded shadow-sm" id="nav-2" role="tabpanel" tabindex="0">
+      <div class="my-3 py-3 bg-light-subtle sticky-top">
+        <div class="d-flex border-bottom justify-content-between">
+          <div>
+            <strong class="pb-2 mb-0 me-2">№</strong>
+            <strong class="pb-2 mb-0">Гравець</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="d-flex justify-content-center block_info">ЖК</span>
+            <span class="d-flex justify-content-center block_info">ЧК</span>
+            <span class="d-flex justify-content-center block_info">І</span>
+          </div>
+        </div>
+      </div>
+      {{#each contents.topyellowcards as |ycard|}}
+        <div class="d-flex text-body-secondary pt-3">
+          <strong class="text-gray-dark me-2">#{{@index}}</strong>
+          <img src="{{ycard.player.photo}}" class="img-thumbnail rounded">
+          <div class="pb-3 mb-0 small lh-sm border-bottom w-100 ms-2">
+            <div class="d-flex justify-content-between">
+              <strong class="text-gray-dark">{{ycard.player.name}} ({{ycard.player.age}} р.)</strong>
+              <div class="d-flex justify-content-between">
+                <span
+                  class="d-flex justify-content-center block_info"><strong>{{ycard.statistics.0.cards.yellow}}</strong></span>
+                <span class="d-flex justify-content-center block_info">{{ycard.statistics.0.cards.red}}</span>
+                <span class="d-flex justify-content-center block_info">{{ycard.statistics.0.games.appearences}}</span>
+              </div>
+            </div>
+            <span class="d-block">{{ycard.statistics.0.team.name}}</span>
+          </div>
+        </div>
+      {{/each}}
+      <p class="mt-4"><small><strong>ЖК</strong>: жовті картки, <strong>ЧК</strong>: червоні картки, <strong>І</strong>:
+        зіграні матчі</small></p>
+    </div>
+    <div class="tab-pane fade bg-body rounded shadow-sm" id="nav-3" role="tabpanel" tabindex="0">
+      <div class="my-3 py-3 bg-light-subtle sticky-top">
+        <div class="d-flex border-bottom justify-content-between">
+          <div>
+            <strong class="pb-2 mb-0 me-2">№</strong>
+            <strong class="pb-2 mb-0">Гравець</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="d-flex justify-content-center block_info">ЧК</span>
+            <span class="d-flex justify-content-center block_info">ЖК</span>
+            <span class="d-flex justify-content-center block_info">І</span>
+          </div>
+        </div>
+      </div>
+      {{#each contents.topredcards as |rcard|}}
+        <div class="d-flex text-body-secondary pt-3">
+          <strong class="text-gray-dark me-2">#{{@index}}</strong>
+          <img src="{{rcard.player.photo}}" class="img-thumbnail rounded">
+          <div class="pb-3 mb-0 small lh-sm border-bottom w-100 ms-2">
+            <div class="d-flex justify-content-between">
+              <strong class="text-gray-dark">{{rcard.player.name}} ({{rcard.player.age}} р.)</strong>
+              <div class="d-flex justify-content-between">
+                <span class="d-flex justify-content-center block_info"><strong>{{rcard.statistics.0.cards.red}}</strong></span>
+                <span class="d-flex justify-content-center block_info">{{rcard.statistics.0.cards.yellow}}</span>
+                <span class="d-flex justify-content-center block_info">{{rcard.statistics.0.games.appearences}}</span>
+              </div>
+            </div>
+            <span class="d-block">{{rcard.statistics.0.team.name}}</span>
+          </div>
+        </div>
+      {{/each}}
+      <p class="mt-4"><small><strong>ЧК</strong>: червоні картки, <strong>ЖК</strong>: жовті картки, <strong>І</strong>:
+        зіграні матчі</small></p>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+</body>
+</html>

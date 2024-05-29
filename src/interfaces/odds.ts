@@ -7,12 +7,12 @@ export interface IBet {
 }
 
 export interface IBetValue {
-  value: number;
-  odds: string;
+  value: string;
+  odd: string;
 }
 
 export interface IBookmakerBets extends IBet {
-  value: IBetValue[];
+  values: IBetValue[];
 }
 
 export interface IBookmakers extends IBet {
@@ -64,4 +64,31 @@ export interface IFixturePredictionResponse {
 }
 export interface IFixturePredictionApiResponse extends BaseApiResponse {
   response: IFixturePredictionResponse[];
+}
+
+export interface IFollowOddBetValue {
+  value: string;
+  odd: string;
+}
+
+export interface IFollowOddBookmaker {
+  id: number;
+  name: string;
+  values: IFollowOddBetValue[];
+}
+
+export interface IFollowOddValue {
+  id: number;
+  name: string;
+  bookmakers: IFollowOddBookmaker[];
+  betValTitles: string[];
+}
+export interface IFollowOdd {
+  [key: number]: IFollowOddValue;
+}
+
+export interface IOddsTableData {
+  id: number;
+  rows: string[][];
+  titles: string[];
 }

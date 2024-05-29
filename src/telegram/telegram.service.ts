@@ -19,7 +19,10 @@ export class TelegramStartService {
     const commonMenu = [
       [Markup.button.callback('🤔 Вказати команду', ECommands.ADD_TEAM)],
       [Markup.button.callback('🫶🏼 Улюблені', ECommands.SEE_FAVORITES)],
-      [Markup.button.callback('🔄 Перезапустити', ECommands.RESTART)],
+      [
+        Markup.button.callback('🛠️ Налаштування', ECommands.SETTINGS),
+        Markup.button.callback('🔄 Перезапустити', ECommands.RESTART),
+      ],
     ];
 
     const { id, first_name, last_name, username, language_code } = message.from;

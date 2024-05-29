@@ -3,6 +3,8 @@ import { WidgetsController } from './widgets.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ApiFootballService } from '@app/services';
 import { HttpModule } from '@nestjs/axios';
+import { WidgetsService } from './widgets.service';
+import { FavoriteRepository, UserRepository } from '@app/repositories';
 @Module({
   imports: [
     HttpModule.registerAsync({
@@ -18,7 +20,7 @@ import { HttpModule } from '@nestjs/axios';
     }),
   ],
   controllers: [WidgetsController],
-  providers: [ConfigService, ApiFootballService],
+  providers: [ConfigService, ApiFootballService, WidgetsService, FavoriteRepository, UserRepository],
   exports: [],
 })
 export class WidgetsModule {}
