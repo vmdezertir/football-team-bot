@@ -1,15 +1,35 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
 import { Favorite } from './favorite.entity';
+import { IsDefined, IsInt, IsString, Min, ValidateNested } from 'class-validator';
 
 export interface ISetNameValue {
   id: number;
   name: string;
 }
 
-export class SettingsDto {
+export interface ISettings {
   bets: ISetNameValue[];
-
   bookmakers: ISetNameValue[];
+}
+
+class SettingsFieldDto implements ISetNameValue {
+  @IsDefined()
+  @IsInt()
+  @Min(1)
+  id: number;
+
+  @IsDefined()
+  @IsString()
+  name: string;
+}
+export class SettingsDto implements ISettings {
+  @IsDefined()
+  @ValidateNested()
+  bets: SettingsFieldDto[];
+
+  @IsDefined()
+  @ValidateNested()
+  bookmakers: SettingsFieldDto[];
 
   public static getDefault() {
     return {

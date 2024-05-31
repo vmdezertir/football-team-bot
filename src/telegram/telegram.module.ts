@@ -28,7 +28,14 @@ import { FavoriteRepository, UserRepository } from '@app/repositories';
 
         return {
           token: confService.get('BOT_TOKEN') as string,
-          middlewares: [session({ store })],
+          middlewares: [
+            session({ store }),
+            (ctx: any, next: Function) => {
+              console.log('state:', ctx.state);
+
+              return next();
+            },
+          ],
         };
       },
       inject: [ConfigService],

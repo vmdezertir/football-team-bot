@@ -1,71 +1,181 @@
-import { EScenes } from '@app/enums';
-import { FavoriteRepository, UserRepository } from '@app/repositories';
+import { EScenes, ESettingsActions } from '@app/enums';
+import { UserRepository } from '@app/repositories';
 import { Injectable, Logger } from '@nestjs/common';
-import { Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
+import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
 import { Scenes } from '@app/@types/custom';
+import { START_SETTINGS_BTS, getAnswerIdentifiers, getSettingsBookBetButtons, getUserId } from '@app/utils';
+import { ApiFootballService } from '@app/services';
 import { Markup } from 'telegraf';
-import { getFavoriteTeamButtons, getUserId } from '@app/utils';
+import { editMessage } from '@app/utils/editMessage';
+import { ISetNameValue, ISettings, User } from '@app/entities';
 
-interface SceneData {}
+interface SceneData {
+  bookmakers?: ISetNameValue[];
+  bets?: ISetNameValue[];
+}
 type SceneCtx = Scenes.SContext<SceneData>;
-
 @Injectable()
 @Scene(EScenes.SETTINGS)
 export class SettingsScene {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly repository: FavoriteRepository,
+    private readonly footballService: ApiFootballService,
   ) {}
 
   private readonly logger = new Logger(SettingsScene.name);
+  messageId: number;
 
-  @SceneEnter()
-  async start(@Ctx() ctx: SceneCtx) {
+  public async getUserSettings(ctx: SceneCtx) {
     const userId = getUserId(ctx);
-    if (!userId) return;
+    if (!userId)
+      return {
+        bookmakers: [],
+      };
 
     const user = await this.userRepository.findOne({
       where: { telegramId: userId },
-      select: ['favorites', 'settings'],
-      relations: { favorites: true },
+      select: ['settings'],
     });
+
     if (!user) {
+      return {
+        bookmakers: [],
+      };
+    }
+
+    return user.settings;
+  }
+
+  public async setUserSettings(
+    ctx: SceneCtx,
+    field: 'bookmakers' | 'bets',
+    updatedValue: ISetNameValue,
+  ): Promise<ISettings> {
+    const id = getUserId(ctx);
+
+    if (!id) {
+      throw new Error('User id not found');
+    }
+
+    return this.userRepository.manager.transaction(async transactionalEntityManager => {
+      const userRepo = transactionalEntityManager.getRepository(User);
+      const user = await userRepo.findOneBy({ telegramId: id });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const index = user.settings[field].findIndex(item => item.id === updatedValue.id);
+
+      if (index !== -1) {
+        user.settings[field].splice(index, 1);
+      } else {
+        user.settings[field].push(updatedValue);
+      }
+
+      const upd = await userRepo.save(user);
+
+      return upd.settings;
+    });
+  }
+
+  async initBookmakerMenu(ctx: SceneCtx) {
+    await ctx.sendChatAction('typing');
+    const [bookmakerId, bookmakerName] = getAnswerIdentifiers(ctx.update);
+    const message = `<b>Налаштування</b>:\nВибери букмекерів які цікаві для тебе: 👇`;
+
+    if (bookmakerId && bookmakerName) {
+      const { bookmakers } = ctx.scene.state;
+      const updatedValue = {
+        id: Number(bookmakerId),
+        name: bookmakerName,
+      };
+
+      try {
+        const updSettings = await this.setUserSettings(ctx, 'bookmakers', updatedValue);
+        const buttons = getSettingsBookBetButtons(
+          ESettingsActions.SETTINGS_BOOKMAKERS,
+          bookmakers || [],
+          updSettings.bookmakers,
+        );
+        await editMessage(ctx, { message, messageId: this.messageId, buttons });
+      } catch (error) {
+        this.logger.error('initBookmakerMenu:', error);
+      }
       return;
     }
 
-    const { favorites, settings } = user;
+    const [settings, bookmakers] = await Promise.all([
+      this.getUserSettings(ctx),
+      this.footballService.findBookmakers(),
+    ]);
+    ctx.scene.state.bookmakers = bookmakers;
 
-    this.logger.log(favorites);
+    const buttons = getSettingsBookBetButtons(ESettingsActions.SETTINGS_BOOKMAKERS, bookmakers, settings.bookmakers);
 
-    const menu = Markup.inlineKeyboard(getFavoriteTeamButtons(favorites));
-    await ctx.replyWithHTML(
-      'Ocь список найкращих команд світу, без перебільшення😉\n По якій команді потрібна інформація? 👇',
-      menu,
-    );
-    return;
+    await editMessage(ctx, { message, messageId: this.messageId, buttons });
   }
 
-  // @Action(new RegExp(`^${ECallbacks.FAVORITE_TEAM}`))
-  // async chooseTeam(@Ctx() ctx: SceneCtx) {
-  //   const [id] = getAnswerIdentifiers(ctx.update);
+  async initBetsMenu(ctx: SceneCtx) {
+    ctx.sendChatAction('typing');
+    const [betId, betName] = getAnswerIdentifiers(ctx.update);
+    const message = `<b>Налаштування</b>:\nВибери вид ставок: 👇`;
 
-  //   if (!id) {
-  //     return;
-  //   }
+    if (betId && betName) {
+      const { bets } = ctx.scene.state;
+      const updatedValue = {
+        id: Number(betId),
+        name: betName,
+      };
 
-  //   const team = await this.repository.findOneById(id);
+      try {
+        const updSettings = await this.setUserSettings(ctx, 'bets', updatedValue);
+        const buttons = getSettingsBookBetButtons(ESettingsActions.SETTINGS_BET, bets || [], updSettings.bets);
+        await editMessage(ctx, { message, messageId: this.messageId, buttons });
+      } catch (error) {
+        this.logger.error('initBetsMenu:', error);
+      }
+      return;
+    }
 
-  //   if (!team) {
-  //     return;
-  //   }
+    const [settings, bets] = await Promise.all([this.getUserSettings(ctx), this.footballService.findFixtureBets()]);
+    ctx.scene.state.bets = bets;
 
-  //   ctx.scene.state = { ...ctx.scene.state, teamId: team.apiId };
+    const buttons = getSettingsBookBetButtons(ESettingsActions.SETTINGS_BET, bets, settings.bookmakers);
 
-  //   await ctx.replyWithHTML(
-  //     `🧑🏽‍🤝‍🧑🏻 <b>${team.name}</b>
-  //   \n👇 Що саме тебе цікавить?`,
-  //     Markup.inlineKeyboard(getTeamButtons()),
-  //   );
-  //   return;
-  // }
+    await editMessage(ctx, { message, messageId: this.messageId, buttons });
+  }
+
+  async initStartMenu(ctx: SceneCtx, start?: boolean) {
+    await ctx.sendChatAction('typing');
+    const message = `Тут ти можеш налаштувати наступне: 👇`;
+
+    if (start) {
+      const msg = await ctx.replyWithHTML(message, Markup.inlineKeyboard(START_SETTINGS_BTS));
+      this.messageId = msg.message_id;
+      return;
+    }
+
+    await editMessage(ctx, { message, messageId: this.messageId, buttons: START_SETTINGS_BTS });
+  }
+
+  @SceneEnter()
+  async start(@Ctx() ctx: SceneCtx) {
+    this.initStartMenu(ctx, true);
+  }
+
+  @Action(ESettingsActions.SETTINGS)
+  async setInitSettings(@Ctx() ctx: SceneCtx) {
+    return this.initStartMenu(ctx);
+  }
+
+  @Action(new RegExp(ESettingsActions.SETTINGS_BOOKMAKERS))
+  async setBookmakers(@Ctx() ctx: SceneCtx) {
+    return this.initBookmakerMenu(ctx);
+  }
+
+  @Action(new RegExp(ESettingsActions.SETTINGS_BET))
+  async setBets(@Ctx() ctx: SceneCtx) {
+    return this.initBetsMenu(ctx);
+  }
 }

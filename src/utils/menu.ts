@@ -2,12 +2,13 @@ import countryJson from './country.json';
 import { Markup } from 'telegraf';
 import { ILeague } from '@app/interfaces';
 import { ITeam } from '@app/interfaces/team';
-import { Favorite } from '@app/entities';
+import { Favorite, ISetNameValue } from '@app/entities';
 import { getFlagEmoji } from './emoji';
-import { ECallbacks } from '@app/enums';
+import { ECallbacks, ESettingsActions } from '@app/enums';
 import { SEPARATOR, COUNTRY_LIMIT } from '@app/const';
+import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
 
-export const getArrayChunk = (array: any[], size: number = 20): any[][] => {
+export const getArrayChunk = (array: any[], size: number = 20): InlineKeyboardButton.CallbackButton[][] => {
   let chunks: any[] = [];
   for (let i = 0; i < array.length; i += size) {
     chunks.push(array.slice(i, i + size));
@@ -15,7 +16,7 @@ export const getArrayChunk = (array: any[], size: number = 20): any[][] => {
   return chunks;
 };
 
-export const getCountriesButtons = (page: number = 0) => {
+export const getCountriesButtons = (page: number = 0): InlineKeyboardButton.CallbackButton[][] => {
   const countries = Object.entries(countryJson).map((country: [string, unknown]) =>
     Markup.button.callback(
       `${getFlagEmoji(country[0])} ${country[1]}`,
@@ -89,3 +90,27 @@ export const getSaveTeamButtons = (league: number) => [
   [Markup.button.callback('До вибору країн', ECallbacks.COUNTRIES)],
   [Markup.button.callback('🫶🏼 Перейти до улюблених', ECallbacks.TO_FAVORITE)],
 ];
+
+export const START_SETTINGS_BTS = [
+  [
+    Markup.button.callback('🎰 Типи ставок', ESettingsActions.SETTINGS_BET),
+    Markup.button.callback('⚜️ Букмекери', ESettingsActions.SETTINGS_BOOKMAKERS),
+  ],
+];
+
+export const getSettingsBookBetButtons = (
+  action: ESettingsActions,
+  available: ISetNameValue[],
+  favorite: ISetNameValue[],
+): InlineKeyboardButton.CallbackButton[][] => {
+  const bButtons = available.map(({ id, name }) => {
+    const active = favorite.some(fb => fb.id === id);
+
+    return Markup.button.callback(`${active ? '📌 ' : ''}${name}`, `${action}${SEPARATOR}${id}${SEPARATOR}${name}`);
+  });
+
+  return [
+    [Markup.button.callback('⬅️ Назад', ESettingsActions.SETTINGS)],
+    ...getArrayChunk(bButtons, action === ESettingsActions.SETTINGS_BET ? 2 : 3),
+  ];
+};

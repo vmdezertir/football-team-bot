@@ -16,6 +16,7 @@ import {
   ILeagueResponse,
   IPlayersStatsResponse,
   IPlayerStatsWidgetContent,
+  IBookmakers,
 } from '@app/interfaces';
 import { ITeam } from '@app/interfaces';
 import { isAfter, isSameYear, format } from 'date-fns';
@@ -151,15 +152,21 @@ export class ApiFootballService {
     });
   }
 
-  async findFixtureBets() {
-    return this.getRequest<IBet[]>(`/odds/bets`, {
+  async findFixtureBets(): Promise<IBet[]> {
+    const response = await this.getRequest<IBet[]>(`/odds/bets`, {
       cache: {
         ttl: this.oneDayCache,
       },
     });
+
+    if (!response) {
+      return [];
+    }
+
+    return response.filter(b => b.id && b.name);
   }
 
-  async findFixtureOdds(fixture: number) {
+  async findFixtureOdds(fixture: number): Promise<IBookmakers[]> {
     const response = await this.getRequest<IFixtureOddsResponse[]>(`/odds?fixture=${fixture}`, {
       cache: {
         ttl: this.oneHourCache,
@@ -188,7 +195,7 @@ export class ApiFootballService {
     });
   }
 
-  async findLeagueStats(leagueId: number, season: number) {
+  async findLeagueStats(leagueId: number, season: number): Promise<IPlayerStatsWidgetContent> {
     const paths = ['topscorers', 'topassists', 'topyellowcards', 'topredcards'];
     const promises = paths.map(path =>
       this.getRequest<IPlayersStatsResponse[]>(`/players/${path}?league=${leagueId}&season=${season}`, {
@@ -199,8 +206,6 @@ export class ApiFootballService {
     );
     const data = await Promise.allSettled(promises);
 
-    this.logger.log('data', data);
-
     return data.reduce((acc, response, cIndex) => {
       if (response.status !== 'fulfilled') {
         return acc;
@@ -210,5 +215,19 @@ export class ApiFootballService {
       acc[key] = value;
       return acc;
     }, {} as IPlayerStatsWidgetContent);
+  }
+
+  async findBookmakers(): Promise<IBet[]> {
+    const response = await this.getRequest<IBet[]>(`/odds/bookmakers`, {
+      cache: {
+        ttl: this.oneDayCache,
+      },
+    });
+
+    if (!response) {
+      return [];
+    }
+
+    return response.filter(b => b.id && b.name);
   }
 }
