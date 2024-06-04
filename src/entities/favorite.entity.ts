@@ -11,7 +11,7 @@ import {
 import { User } from './user.entity';
 
 @Entity({ name: 'favorites' })
-@Unique(['userId', 'id'])
+@Unique(['userId', 'apiId'])
 export class Favorite {
   @PrimaryGeneratedColumn()
   id: number;

@@ -1,15 +1,30 @@
-import { Context } from 'telegraf';
+import { Scenes } from '@app/@types/custom';
+import { Message } from 'telegraf/typings/core/types/typegram';
 
-export const renderError = (ctx: Context) => {
-  return ctx.replyWithHTML(
-    `🤚🏻🟥 <b>Упс. Щось пішло не так</b>\nСпробуй ще раз або перезагрузи бота коммандою <code>/restart</code>`,
-  );
-};
+export type TErrorType = 'db' | 'api' | 'notFound';
 
-export const renderLoading = (ctx: Context) => {
-  return ctx.reply('Оброблюю запит 🏃🏻‍♂️ ⚽. Почекай трохи');
-};
+export const renderError = async (
+  ctx: Scenes.SContext<{}>,
+  errorType?: TErrorType,
+  message?: string,
+): Promise<Message.TextMessage> => {
+  let text = message || '';
+  switch (errorType) {
+    case 'db': {
+      text = `🤚🏻🟥 <b>Упс. Щось пішло не так</b>\nСпробуй ще раз або перезагрузи бота коммандою <code>/restart</code>`;
+      break;
+    }
+    case 'api': {
+      text = '🐞 <b>Виникла неочікувана помилка з базою данних. Спробуйте пізніше</b> ⏳';
+      break;
+    }
+    case 'notFound': {
+      text = message || '🤷‍♂️ Нажаль, ніц не знайшов';
+      break;
+    }
+  }
 
-export const renderApiError = (ctx: Context) => {
-  return ctx.replyWithHTML('🐞 <b>Виникла неочікувана помилка з базою данних. Спробуйте пізніше</b> ⏳');
+  const msg = await ctx.replyWithHTML(text);
+  ctx.session.errMsgId = msg.message_id;
+  return msg;
 };

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
+import Axios from 'axios';
 import { groupBy } from 'lodash';
 import {
   ILeague,
@@ -21,6 +21,7 @@ import {
 import { ITeam } from '@app/interfaces';
 import { isAfter, isSameYear, format } from 'date-fns';
 import { AxiosCacheInstance, setupCache, CacheRequestConfig } from 'axios-cache-interceptor';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ApiFootballService {
@@ -29,8 +30,17 @@ export class ApiFootballService {
   oneHourCache: number;
   oneDayCache: number;
 
-  constructor(private readonly httpService: HttpService) {
-    this.axiosInstance = setupCache(this.httpService.axiosRef);
+  constructor(private readonly configService: ConfigService) {
+    // TODO: switch cache from Memory Storage to Redis
+    this.axiosInstance = setupCache(
+      Axios.create({
+        baseURL: `https://${this.configService.get('FOOTBALL_API_HOST')}`,
+        headers: {
+          'x-rapidapi-host': this.configService.get('FOOTBALL_API_HOST'),
+          'x-rapidapi-key': this.configService.get('FOOTBALL_API_KEY'),
+        },
+      }),
+    );
     this.oneHourCache = 1000 * 60 * 60;
     // Recommended Calls : 1 call per day. But we will reduce it to 12 hour
     this.oneDayCache = 1000 * 60 * 720;

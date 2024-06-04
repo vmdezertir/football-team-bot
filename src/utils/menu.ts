@@ -8,7 +8,10 @@ import { ECallbacks, ESettingsActions } from '@app/enums';
 import { SEPARATOR, COUNTRY_LIMIT } from '@app/const';
 import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
 
-export const getArrayChunk = (array: any[], size: number = 20): InlineKeyboardButton.CallbackButton[][] => {
+export const getArrayChunk = (
+  array: InlineKeyboardButton.CallbackButton[],
+  size: number = 20,
+): InlineKeyboardButton.CallbackButton[][] => {
   let chunks: any[] = [];
   for (let i = 0; i < array.length; i += size) {
     chunks.push(array.slice(i, i + size));
@@ -33,7 +36,7 @@ export const getCountriesButtons = (page: number = 0): InlineKeyboardButton.Call
   const pageButtons = getArrayChunk(allButtons[page], 2);
   buttons.push(...pageButtons);
 
-  if (page < allButtons.length) {
+  if (allButtons.length && page < allButtons.length - 1) {
     buttons.push([Markup.button.callback('Вперед ➡️', `${ECallbacks.COUNTRY_PAGE}${SEPARATOR}${page + 1}`)]);
   }
 
@@ -69,6 +72,7 @@ export const getTeamButtons = () => [
     Markup.button.callback('📊 Статистика', ECallbacks.TEAM_STATS),
   ],
   [Markup.button.callback('⚔️ Найближчі 5 матчів', ECallbacks.TEAM_FIXTURES)],
+  [Markup.button.callback('❌ Не відстежувати', ECallbacks.REMOVE_TEAM)],
 ];
 
 export const getFixtureButtons = (fixture: number, user: number, path?: string) => [

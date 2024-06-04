@@ -8,11 +8,11 @@ import { TelegramStartService } from '@app/telegram/telegram.service';
 import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
 
-import { HttpModule } from '@nestjs/axios';
 import { ApiFootballService } from '@app/services/apiFootball.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Favorite, User } from '@app/entities';
 import { FavoriteRepository, UserRepository } from '@app/repositories';
+import { cleanupMiddleware } from '@app/utils';
 
 @Module({
   imports: [
@@ -28,27 +28,9 @@ import { FavoriteRepository, UserRepository } from '@app/repositories';
 
         return {
           token: confService.get('BOT_TOKEN') as string,
-          middlewares: [
-            session({ store }),
-            (ctx: any, next: Function) => {
-              console.log('state:', ctx.state);
-
-              return next();
-            },
-          ],
+          middlewares: [session({ store }), cleanupMiddleware],
         };
       },
-      inject: [ConfigService],
-    }),
-    HttpModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        baseURL: `https://${configService.get('FOOTBALL_API_HOST')}`,
-        headers: {
-          'x-rapidapi-host': configService.get('FOOTBALL_API_HOST'),
-          'x-rapidapi-key': configService.get('FOOTBALL_API_KEY'),
-        },
-      }),
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([User, Favorite]),
@@ -85,11 +67,11 @@ export class TelegramModule {
 
   @Hears('🛠️ Налаштування')
   async enterSettingsScene(ctx: SceneContext) {
-    await ctx.scene.enter(EScenes.SETTINGS);
+    return ctx.scene.enter(EScenes.SETTINGS);
   }
 
   @Hears('🔄 Перезапустити')
   async restart(ctx: SceneContext) {
-    await ctx.scene.reenter();
+    return ctx.scene.reenter();
   }
 }

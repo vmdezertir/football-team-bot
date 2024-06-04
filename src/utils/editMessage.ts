@@ -8,13 +8,28 @@ export interface IEditMessageExtra {
   buttons?: InlineKeyboardButton[][];
 }
 
+export interface IEditMessageMenu {
+  messageId?: number;
+  buttons: InlineKeyboardButton[][];
+}
+
 export const editMessage = async (ctx: Context, { messageId, message, buttons }: IEditMessageExtra) => {
   const chatId = await getUserId(ctx);
 
   const markup = buttons ? { reply_markup: { inline_keyboard: buttons } } : {};
 
-  return ctx.telegram.editMessageText(chatId, messageId, undefined, message, {
-    parse_mode: 'HTML',
-    ...markup,
-  });
+  await ctx.telegram
+    .editMessageText(chatId, messageId, undefined, message, {
+      parse_mode: 'HTML',
+      ...markup,
+    })
+    .catch((err: any) => {});
+};
+
+export const editMessageMenu = async (ctx: Context, { messageId, buttons }: IEditMessageMenu) => {
+  const chatId = await getUserId(ctx);
+
+  await ctx.telegram
+    .editMessageReplyMarkup(chatId, messageId, undefined, { inline_keyboard: buttons })
+    .catch((err: any) => {});
 };

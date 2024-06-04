@@ -14,14 +14,15 @@ import {
   getTeamButtons,
   getTeamLeagueButtons,
   getUserId,
-  renderApiError,
-  renderLoading,
+  renderError,
 } from '@app/utils';
 import { EPlayerPosition } from '@app/interfaces';
 import { format } from 'date-fns/format';
+import { toZonedTime } from 'date-fns-tz';
 import { uk as ukLocale } from 'date-fns/locale/uk';
 import { MESSAGE_STR_SEPARATOR } from '@app/const';
 import { ConfigService } from '@nestjs/config';
+import { editMessage } from '@app/utils/editMessage';
 
 interface SceneData {
   teamId?: number;
@@ -45,37 +46,46 @@ export class FavoriteScene {
     const userId = getUserId(ctx);
     if (!userId) return;
 
+    const { favTeamMsgId } = ctx.session;
+    if (favTeamMsgId) {
+      await ctx.deleteMessage(favTeamMsgId).catch(err => {
+        this.logger.warn(`Can't delete message ${favTeamMsgId}:`, err);
+      });
+      ctx.session.favTeamMsgId = undefined;
+    }
+
     const user = await this.userRepository.findOne({
       where: { telegramId: userId },
       select: { favorites: true },
       relations: { favorites: true },
     });
+
     if (!user) {
+      await renderError(ctx, 'db');
       return;
     }
 
     const { favorites } = user;
     if (!favorites.length) {
-      await ctx.replyWithHTML(
-        '🔍 У тебе ще відсутні улюблені команди\n Будь ласка, вкажи свої улюблені команди\n\n<i>Вибери відповідний пункт меню</i>! 👇',
-        { parse_mode: 'HTML' },
-      );
+      const message =
+        '🔍 У тебе ще відсутні улюблені команди\n Будь ласка, вкажи свої улюблені команди\n\n<i>Вибери відповідний пункт меню</i>! 👇';
+      await renderError(ctx, 'notFound', message);
       return;
     }
 
-    this.logger.log(favorites);
-
     const menu = Markup.inlineKeyboard(getFavoriteTeamButtons(favorites));
-    await ctx.replyWithHTML(
+    const msg = await ctx.replyWithHTML(
       'Ocь список найкращих команд світу, без перебільшення😉\n По якій команді потрібна інформація? 👇',
       menu,
     );
+    ctx.session.favTeamMsgId = msg.message_id;
     return;
   }
 
   @Action(new RegExp(`^${ECallbacks.FAVORITE_TEAM}`))
   async chooseTeam(@Ctx() ctx: SceneCtx) {
     const [id] = getAnswerIdentifiers(ctx.update);
+    const { favTeamMsgId: messageId } = ctx.session;
 
     if (!id) {
       return;
@@ -84,16 +94,36 @@ export class FavoriteScene {
     const team = await this.repository.findOneById(id);
 
     if (!team) {
+      await renderError(ctx, 'db');
       return;
     }
 
-    ctx.scene.state = { ...ctx.scene.state, teamId: team.apiId };
+    ctx.scene.state.teamId = team.apiId;
+    const buttons = getTeamButtons();
+    const message = `🧑🏽‍🤝‍🧑🏻 <b>${team.name}</b>
+    \n👇 Що саме тебе цікавить?`;
 
-    await ctx.replyWithHTML(
-      `🧑🏽‍🤝‍🧑🏻 <b>${team.name}</b>
-    \n👇 Що саме тебе цікавить?`,
-      Markup.inlineKeyboard(getTeamButtons()),
-    );
+    return editMessage(ctx, { messageId, message, buttons });
+  }
+
+  @Action(ECallbacks.REMOVE_TEAM)
+  async removeTeam(@Ctx() ctx: SceneCtx) {
+    const { teamId } = ctx.scene.state;
+    const userId = getUserId(ctx);
+
+    if (!teamId) {
+      return;
+    }
+
+    try {
+      const user = await this.userRepository.findOneBy({ telegramId: userId });
+      await this.repository.delete({ apiId: teamId, userId: user?.id });
+      await ctx.scene.reenter();
+    } catch (error) {
+      this.logger.error(`Can't delete team ${teamId}`, error);
+      await renderError(ctx, 'db');
+    }
+
     return;
   }
 
@@ -105,14 +135,13 @@ export class FavoriteScene {
       return;
     }
 
-    await renderLoading(ctx);
     let players, injPlayers, coach;
 
     try {
       [players, injPlayers, coach] = await this.footballService.findTeamSquad(teamId);
     } catch (err) {
-      this.logger.error(err);
-      renderApiError(ctx);
+      this.logger.error('api findTeamSquad err:', err);
+      await renderError(ctx, 'api');
       return;
     }
 
@@ -145,13 +174,13 @@ export class FavoriteScene {
     try {
       leagues = await this.footballService.findTeamLeagues(teamId);
     } catch (err) {
-      this.logger.error(err);
-      renderApiError(ctx);
+      this.logger.error('api findTeamLeagues err:', err);
+      await renderError(ctx, 'api');
       return;
     }
 
     if (!leagues.length) {
-      await ctx.reply('🌴🍹⛱️🥥 Немає активних турнірів 🏆');
+      await renderError(ctx, 'notFound', '🌴🍹⛱️🥥 Немає активних турнірів 🏆');
       return;
     }
 
@@ -160,7 +189,7 @@ export class FavoriteScene {
     const path = this.configService.get<string>('BOT_API_URL');
 
     for (const { league, seasons } of leagues) {
-      this.logger.log('league seasons', seasons);
+      this.logger.log('league seasons:', seasons);
       const menu = getTeamLeagueButtons(league.id, seasons[0].year, path);
       const icon = getLeagueTypeEmoji(league.type);
       await ctx.replyWithHTML(`${icon} <b>${league.type}. ${league.name}</b>`, Markup.inlineKeyboard(menu));
@@ -182,6 +211,7 @@ export class FavoriteScene {
     });
 
     if (!user) {
+      await renderError(ctx, 'db');
       return;
     }
 
@@ -189,13 +219,13 @@ export class FavoriteScene {
     try {
       fixtures = await this.footballService.findTeamFeatureGames(teamId);
     } catch (err) {
-      this.logger.error(err);
-      renderApiError(ctx);
+      this.logger.error('api findTeamFeatureGames err:', err);
+      await renderError(ctx, 'api');
       return;
     }
 
     if (!fixtures.length) {
-      await ctx.reply('🌴🍹⛱️🥥 Немає найближчих запланованих матчів');
+      await renderError(ctx, 'notFound', '🌴🍹⛱️🥥 Немає найближчих запланованих матчів');
       return;
     }
 
@@ -210,8 +240,9 @@ export class FavoriteScene {
       ) {
         res = `🏆 <u>${league.name} (${league.round})</u>\n`;
       }
+      const zonedDate = toZonedTime(fixture.date, 'Europe/Kiev');
 
-      res = `${res}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(fixture.date, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (UTC)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
+      res = `${res}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(zonedDate, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (Київський час)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
       const menu = getFixtureButtons(fixture.id, user.id, path);
       await ctx.replyWithHTML(res, Markup.inlineKeyboard(menu));
     }
@@ -231,12 +262,12 @@ export class FavoriteScene {
     try {
       predictionData = await this.footballService.findFixturePrediction(Number(fixture));
     } catch (err) {
-      this.logger.error(err);
-      renderApiError(ctx);
+      this.logger.error('api findFixturePrediction err:', err);
+      await renderError(ctx, 'api');
       return;
     }
     if (!predictionData.length) {
-      await ctx.reply('🔮🎱 На данну хвилину не знаю. Таролог ще налаштовується');
+      await renderError(ctx, 'notFound', '🔮🎱 На данну хвилину не знаю. Таролог ще налаштовується');
       return;
     }
 
@@ -263,6 +294,6 @@ export class FavoriteScene {
       return;
     }
 
-    await ctx.reply('Функціонал в розробці');
+    await ctx.reply('Функціонал знаходиться в розробці');
   }
 }
