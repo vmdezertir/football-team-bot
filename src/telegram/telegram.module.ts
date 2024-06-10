@@ -8,11 +8,12 @@ import { TelegramStartService } from '@app/telegram/telegram.service';
 import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
 
-import { ApiFootballService } from '@app/services/apiFootball.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Favorite, User } from '@app/entities';
-import { FavoriteRepository, UserRepository } from '@app/repositories';
+import { Favorite, Fixture, User } from '@app/entities';
+import { FavoriteRepository, UserRepository, FixtureRepository } from '@app/repositories';
 import { cleanupMiddleware } from '@app/utils';
+import { BullModule } from '@nestjs/bull';
+import { ApiFootballService, RemindQueueConsumerService } from '@app/services';
 
 @Module({
   imports: [
@@ -33,17 +34,20 @@ import { cleanupMiddleware } from '@app/utils';
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User, Favorite]),
+    BullModule.registerQueue({ name: 'remind' }),
+    TypeOrmModule.forFeature([User, Favorite, Fixture]),
   ],
   providers: [
     ConfigService,
     TelegramStartService,
     ApiFootballService,
+    RemindQueueConsumerService,
     AddTeamScene,
     SettingsScene,
     FavoriteScene,
-    FavoriteRepository,
     UserRepository,
+    FavoriteRepository,
+    FixtureRepository,
   ],
 })
 @Update()

@@ -134,7 +134,7 @@ export class AddTeamScene {
       return;
     }
 
-    const { page } = ctx.scene.state;
+    const { page = 0 } = ctx.scene.state;
 
     buttons = [
       [Markup.button.callback('⬅️ Назад', `${ECallbacks.COUNTRY_PAGE}${SEPARATOR}${page}`)],

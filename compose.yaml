@@ -14,7 +14,20 @@ services:
       - '5432:5432'
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-
+  redis:
+    image: redis:7.2.5
+    container_name: telegram_bot_redis
+    hostname: telegram_bot_redis
+    restart: always
+    environment:
+      REDIS_DATABASES: 16
+      REDIS_PORT: ${REDIS_DB_PORT}
+      REDIS_PASSWORD: ${REDIS_DB_PASSWORD}
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./redis/node-1/data:/data
+      - ./redis/node-1/conf/redis.conf:/etc/redis/redis.conf
 
   app:
     build:
@@ -27,5 +40,6 @@ services:
       - '3000:3000'
     depends_on:
       - db
+      - redis
     volumes:
       - ./src:/app/src

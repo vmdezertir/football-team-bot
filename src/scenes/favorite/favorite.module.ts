@@ -1,5 +1,5 @@
 import { ECallbacks, EScenes } from '@app/enums';
-import { FavoriteRepository, UserRepository } from '@app/repositories';
+import { FavoriteRepository, FixtureRepository, UserRepository } from '@app/repositories';
 import { ApiFootballService } from '@app/services';
 import { Injectable, Logger } from '@nestjs/common';
 import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
@@ -16,16 +16,21 @@ import {
   getUserId,
   renderError,
 } from '@app/utils';
-import { EPlayerPosition } from '@app/interfaces';
+import { EPlayerPosition, IFollowJob, ITeamFixturesResponse } from '@app/interfaces';
 import { format } from 'date-fns/format';
 import { toZonedTime } from 'date-fns-tz';
 import { uk as ukLocale } from 'date-fns/locale/uk';
 import { MESSAGE_STR_SEPARATOR } from '@app/const';
 import { ConfigService } from '@nestjs/config';
-import { editMessage } from '@app/utils/editMessage';
+import { editMessage, editMessageMenu } from '@app/utils/editMessage';
+import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
+import { InsertResult } from 'typeorm';
+import { differenceInMilliseconds, subMinutes } from 'date-fns';
 
 interface SceneData {
   teamId?: number;
+  fixtures?: ITeamFixturesResponse[];
 }
 type SceneCtx = Scenes.SContext<SceneData>;
 
@@ -33,13 +38,50 @@ type SceneCtx = Scenes.SContext<SceneData>;
 @Scene(EScenes.FAVORITE)
 export class FavoriteScene {
   constructor(
+    @InjectQueue('remind') private readonly remindQueue: Queue<IFollowJob>,
     private readonly footballService: ApiFootballService,
     private readonly userRepository: UserRepository,
     private readonly repository: FavoriteRepository,
+    private readonly fixtureRepository: FixtureRepository,
     private readonly configService: ConfigService,
   ) {}
 
   private readonly logger = new Logger(FavoriteScene.name);
+
+  async manageUserFixtureRelation({
+    fixture,
+    userId,
+  }: {
+    fixture: number;
+    userId: number;
+  }): Promise<number | undefined> {
+    const savedFollower = await this.fixtureRepository.findOne({
+      where: { id: fixture },
+      relations: ['users'],
+      select: { id: true, users: { id: true } },
+    });
+    let addedId;
+
+    if (!savedFollower) {
+      const user = await this.userRepository.findOneOrFail({ where: { id: userId } });
+      const saved: InsertResult = await this.fixtureRepository.insert({ id: fixture, users: [user] });
+      return saved.identifiers[0].id;
+    }
+
+    const isUserInFixture = savedFollower.users.some(user => user.id === userId);
+
+    if (isUserInFixture) {
+      savedFollower.users = savedFollower.users.filter(user => user.id !== userId);
+    } else {
+      const user = await this.userRepository.findOneOrFail({ where: { id: userId } });
+      savedFollower.users.push(user);
+      addedId = savedFollower.id;
+    }
+
+    await this.fixtureRepository.save(savedFollower);
+
+    return addedId;
+  }
 
   @SceneEnter()
   async start(@Ctx() ctx: SceneCtx) {
@@ -207,17 +249,21 @@ export class FavoriteScene {
 
     const user = await this.userRepository.findOne({
       where: { telegramId: userId },
-      select: ['id'],
+      select: { id: true, fixtures: { id: true } },
+      relations: ['fixtures'],
     });
+
+    this.logger.log('user', JSON.stringify(user));
 
     if (!user) {
       await renderError(ctx, 'db');
       return;
     }
 
-    let fixtures;
+    let fixtures: ITeamFixturesResponse[];
     try {
       fixtures = await this.footballService.findTeamFeatureGames(teamId);
+      ctx.scene.state.fixtures = fixtures;
     } catch (err) {
       this.logger.error('api findTeamFeatureGames err:', err);
       await renderError(ctx, 'api');
@@ -243,8 +289,16 @@ export class FavoriteScene {
       const zonedDate = toZonedTime(fixture.date, 'Europe/Kiev');
 
       res = `${res}\n<b>${teams.home.name}</b> ⚔️ <b>${teams.away.name}</b>\n📅Дата: ${format(zonedDate, 'eeee, dd MMM, HH:mm', { locale: ukLocale })} (Київський час)\n🗣 Peфері: ${fixture.referee || '-'}\n`;
-      const menu = getFixtureButtons(fixture.id, user.id, path);
-      await ctx.replyWithHTML(res, Markup.inlineKeyboard(menu));
+      const reply = await ctx.replyWithHTML(res);
+      const isFollow = user.fixtures.some(f => f.id === fixture.id);
+      const buttons = getFixtureButtons({
+        fixture: fixture.id,
+        userId: user.id,
+        path,
+        messageId: reply.message_id,
+        isFollow,
+      });
+      await editMessageMenu(ctx, { messageId: reply.message_id, buttons });
     }
   }
 
@@ -288,12 +342,58 @@ export class FavoriteScene {
 
   @Action(new RegExp(`^${ECallbacks.FIXTURE_REMIND}`))
   async remindMe(@Ctx() ctx: SceneCtx) {
-    const [fixture] = getAnswerIdentifiers(ctx.update);
+    const [fixtureId, messageId, userId] = getAnswerIdentifiers(ctx.update);
+    const path = this.configService.get<string>('BOT_API_URL');
 
-    if (!fixture) {
+    if (!fixtureId || !messageId || !userId) {
       return;
     }
 
-    await ctx.reply('Функціонал знаходиться в розробці');
+    const follower = {
+      fixture: Number(fixtureId),
+      userId: Number(userId),
+    };
+    let isFollow = false;
+
+    try {
+      const fId = await this.manageUserFixtureRelation(follower);
+      const { fixtures: stateFixtures } = ctx.scene.state;
+      let fixtureData = stateFixtures?.find(f => f.fixture.id === fId);
+
+      // if it's old reference, than api call
+      if (fId && !fixtureData) {
+        fixtureData = await this.footballService.findFixture(fId);
+      }
+
+      if (fId && fixtureData?.fixture.timestamp) {
+        const jobData: IFollowJob = {
+          id: fId,
+        };
+        const fDateMS = fixtureData.fixture.timestamp * 1000;
+        // notify 10 minutes before the start
+        const adjustedFDate = subMinutes(new Date(fDateMS), 10);
+        const currentDate = new Date();
+
+        await this.remindQueue.add(jobData, {
+          // delay: differenceInMilliseconds(fixtureData.fixture.timestamp * 1000, currentDate),
+          delay: 3000,
+          jobId: `remind_fixture_${fixtureId}`,
+          removeOnComplete: true,
+        });
+        isFollow = true;
+      }
+    } catch (error) {
+      this.logger.error('saving follow fixture error:', error);
+      return renderError(ctx, 'api');
+    }
+
+    const buttons = getFixtureButtons({
+      ...follower,
+      path,
+      messageId: Number(messageId),
+      isFollow,
+    });
+    await editMessageMenu(ctx, { messageId: Number(messageId), buttons });
+    return;
   }
 }

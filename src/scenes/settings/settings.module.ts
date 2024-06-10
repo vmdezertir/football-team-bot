@@ -162,7 +162,7 @@ export class SettingsScene {
     const { settingsMsgId: messageId } = ctx.session;
 
     if (start && messageId) {
-      await ctx.deleteMessage(messageId);
+      await ctx.deleteMessage(messageId).catch(() => {});
       ctx.session.settingsMsgId = undefined;
     }
 

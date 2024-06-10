@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TelegramModule } from '@app/telegram/telegram.module';
 import { WidgetsModule } from '@app/widgets/widgets.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -20,6 +21,18 @@ import { WidgetsModule } from '@app/widgets/widgets.module';
           entities: [],
           synchronize: true,
           autoLoadEntities: true,
+        };
+      },
+      inject: [ConfigService],
+    }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (confService: ConfigService) => {
+        return {
+          redis: {
+            host: confService.get<string>('REDIS_DB_HOST'),
+            port: confService.get<number>('REDIS_DB_PORT'),
+          },
         };
       },
       inject: [ConfigService],

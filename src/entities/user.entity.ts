@@ -1,6 +1,17 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Unique,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Favorite } from './favorite.entity';
 import { IsDefined, IsInt, IsString, Min, ValidateNested } from 'class-validator';
+import { Fixture } from './fixture.entity';
 
 export interface ISetNameValue {
   id: number;
@@ -94,4 +105,12 @@ export class User {
 
   @OneToMany(() => Favorite, favorite => favorite.user, { onDelete: 'CASCADE' })
   favorites: Favorite[];
+
+  @ManyToMany(() => Fixture, { onDelete: 'CASCADE' })
+  @JoinTable({
+    name: 'user_fixtures',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'fixture_id', referencedColumnName: 'id' },
+  })
+  fixtures: Fixture[];
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Axios from 'axios';
 import { groupBy } from 'lodash';
 import {
@@ -21,29 +21,44 @@ import {
 import { ITeam } from '@app/interfaces';
 import { isAfter, isSameYear, format } from 'date-fns';
 import { AxiosCacheInstance, setupCache, CacheRequestConfig } from 'axios-cache-interceptor';
+import { Redis } from 'ioredis';
 import { ConfigService } from '@nestjs/config';
+import { getRedisStorage } from '@app/utils';
 
 @Injectable()
-export class ApiFootballService {
+export class ApiFootballService implements OnModuleInit {
   private readonly logger = new Logger(ApiFootballService.name);
   axiosInstance: AxiosCacheInstance;
   oneHourCache: number;
   oneDayCache: number;
 
   constructor(private readonly configService: ConfigService) {
-    // TODO: switch cache from Memory Storage to Redis
-    this.axiosInstance = setupCache(
-      Axios.create({
-        baseURL: `https://${this.configService.get('FOOTBALL_API_HOST')}`,
-        headers: {
-          'x-rapidapi-host': this.configService.get('FOOTBALL_API_HOST'),
-          'x-rapidapi-key': this.configService.get('FOOTBALL_API_KEY'),
-        },
-      }),
-    );
     this.oneHourCache = 1000 * 60 * 60;
     // Recommended Calls : 1 call per day. But we will reduce it to 12 hour
     this.oneDayCache = 1000 * 60 * 720;
+  }
+
+  onModuleInit() {
+    const client = new Redis({
+      host: this.configService.get<string>('REDIS_DB_HOST'),
+      port: this.configService.get<number>('REDIS_DB_PORT'),
+      username: 'default',
+      password: this.configService.get<string>('REDIS_DB_PASSWORD'),
+      db: 0,
+    });
+    const storage = getRedisStorage(client);
+    this.axiosInstance = setupCache(
+      Axios.create({
+        baseURL: `https://${this.configService.get<string>('FOOTBALL_API_HOST')}`,
+        headers: {
+          'x-rapidapi-host': this.configService.get<string>('FOOTBALL_API_HOST'),
+          'x-rapidapi-key': this.configService.get<string>('FOOTBALL_API_KEY'),
+        },
+      }),
+      {
+        storage,
+      },
+    );
   }
 
   private async getRequest<T = any>(url: string, config?: CacheRequestConfig): Promise<T> {
@@ -160,6 +175,12 @@ export class ApiFootballService {
         ttl: 1000 * 60 * 5,
       },
     });
+  }
+
+  async findFixture(id: number): Promise<ITeamFixturesResponse> {
+    const response = await this.getRequest<ITeamFixturesResponse[]>(`/fixtures?id=${id}`);
+
+    return response[0];
   }
 
   async findFixtureBets(): Promise<IBet[]> {

@@ -1,6 +1,7 @@
 import { BaseApiResponse } from './common';
 import { IPlayer, IPlayerInjure } from './player';
 import { ILeague } from './league';
+import { EFixtureStatus } from './fixtureStatus';
 
 export interface IShortInfoTeam {
   id: number;
@@ -35,12 +36,18 @@ export interface ITeamSquadApiResponse extends BaseApiResponse {
   response: ITeamSquadResponse[];
 }
 
+export interface IFixtureStatus {
+  long: string;
+  short: EFixtureStatus;
+  elapsed: number;
+}
 export interface IFixture {
   id: number;
   referee?: string | null;
   timezone: string;
   date: string;
-  timestamp: Date;
+  timestamp: number;
+  status: IFixtureStatus;
 }
 
 interface IFLeague {

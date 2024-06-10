@@ -26,6 +26,7 @@ export const getCountriesButtons = (page: number = 0): InlineKeyboardButton.Call
       `${ECallbacks.COUNTRY}${SEPARATOR}${country[0]}`,
     ),
   );
+
   const allButtons = getArrayChunk(countries, COUNTRY_LIMIT);
 
   const buttons = [];
@@ -75,12 +76,29 @@ export const getTeamButtons = () => [
   [Markup.button.callback('❌ Не відстежувати', ECallbacks.REMOVE_TEAM)],
 ];
 
-export const getFixtureButtons = (fixture: number, user: number, path?: string) => [
+export const getFixtureButtons = ({
+  fixture,
+  userId,
+  path,
+  messageId,
+  isFollow,
+}: {
+  fixture: number;
+  messageId: number;
+  userId: number;
+  path?: string;
+  isFollow?: boolean;
+}) => [
   [
-    Markup.button.webApp('🎲 Коефіцієнти', `${path}/widgets/fixture/${fixture}/odds?user=${user}`),
+    Markup.button.webApp('🎲 Коефіцієнти', `${path}/widgets/fixture/${fixture}/odds?user=${userId}`),
     Markup.button.callback('🔮 Прогноз', `${ECallbacks.FIXTURE_PRED}${SEPARATOR}${fixture}`),
   ],
-  [Markup.button.callback('🔔 Сповістити про початок', `${ECallbacks.FIXTURE_REMIND}${SEPARATOR}${fixture}`)],
+  [
+    Markup.button.callback(
+      isFollow ? '🔕 Не сповіщати' : '🔔 Сповістити про початок',
+      `${ECallbacks.FIXTURE_REMIND}${SEPARATOR}${fixture}${SEPARATOR}${messageId}${SEPARATOR}${userId}`,
+    ),
+  ],
 ];
 
 export const getChooseTeamButtons = (league: number) => [
