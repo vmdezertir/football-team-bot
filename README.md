@@ -2,6 +2,9 @@
 
 A bot that helps track the life of your favorite football team.
 
+https://github.com/vmdezertir/football-team-bot/assets/88883234/dd8a676f-e92f-4e5a-9b8f-e1e824e0baaf
+
+
 ## Preparation
 
 - [Install nvm](https://github.com/nvm-sh/nvm#installing-and-updating) and latest LTS Nodejs version: `nvm install --lts`
