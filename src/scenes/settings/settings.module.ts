@@ -13,7 +13,7 @@ import {
 import { ApiFootballService } from '@app/services';
 import { Markup } from 'telegraf';
 import { editMessage } from '@app/utils/editMessage';
-import { ISetNameValue, ISettings, User } from '@app/entities';
+import { ISetNameValue, ISettings, SettingsDto, User } from '@app/entities';
 
 interface SceneData {
   bookmakers?: ISetNameValue[];
@@ -31,11 +31,12 @@ export class SettingsScene {
 
   private readonly logger = new Logger(SettingsScene.name);
 
-  public async getUserSettings(ctx: SceneCtx) {
+  public async getUserSettings(ctx: SceneCtx): Promise<SettingsDto> {
     const userId = getUserId(ctx);
     if (!userId)
       return {
         bookmakers: [],
+        bets: [],
       };
 
     const user = await this.userRepository.findOne({
@@ -46,6 +47,7 @@ export class SettingsScene {
     if (!user) {
       return {
         bookmakers: [],
+        bets: [],
       };
     }
 
@@ -151,7 +153,7 @@ export class SettingsScene {
     const [settings, bets] = await Promise.all([this.getUserSettings(ctx), this.footballService.findFixtureBets()]);
     ctx.scene.state.bets = bets;
 
-    const buttons = getSettingsBookBetButtons(ESettingsActions.SETTINGS_BET, bets, settings.bookmakers);
+    const buttons = getSettingsBookBetButtons(ESettingsActions.SETTINGS_BET, bets, settings.bets);
 
     await editMessage(ctx, { message, messageId: messageId, buttons });
   }

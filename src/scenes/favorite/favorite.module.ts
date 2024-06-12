@@ -375,8 +375,7 @@ export class FavoriteScene {
         const currentDate = new Date();
 
         await this.remindQueue.add(jobData, {
-          // delay: differenceInMilliseconds(fixtureData.fixture.timestamp * 1000, currentDate),
-          delay: 3000,
+          delay: differenceInMilliseconds(adjustedFDate, currentDate),
           jobId: `remind_fixture_${fixtureId}`,
           removeOnComplete: true,
         });
