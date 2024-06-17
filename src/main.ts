@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { join } from 'path';
-import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+
+import { AppModule } from './app.module';
 
 if (process.env.NODE_ENV !== 'development') {
   require('module-alias/register');

@@ -1,10 +1,21 @@
+import { InjectQueue } from '@nestjs/bull';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Queue } from 'bull';
+import { differenceInMilliseconds, subMinutes } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+import { format } from 'date-fns/format';
+import { uk as ukLocale } from 'date-fns/locale/uk';
+import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
+import { Markup } from 'telegraf';
+import { InsertResult } from 'typeorm';
+
+import { Scenes } from '@app/@types/custom';
+import { MESSAGE_STR_SEPARATOR } from '@app/const';
 import { ECallbacks, EScenes } from '@app/enums';
+import { EPlayerPosition, IFollowJob, ITeamFixturesResponse } from '@app/interfaces';
 import { FavoriteRepository, FixtureRepository, UserRepository } from '@app/repositories';
 import { ApiFootballService } from '@app/services';
-import { Injectable, Logger } from '@nestjs/common';
-import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
-import { Scenes } from '@app/@types/custom';
-import { Markup } from 'telegraf';
 import {
   getAnswerIdentifiers,
   getFavoriteTeamButtons,
@@ -16,17 +27,7 @@ import {
   getUserId,
   renderError,
 } from '@app/utils';
-import { EPlayerPosition, IFollowJob, ITeamFixturesResponse } from '@app/interfaces';
-import { format } from 'date-fns/format';
-import { toZonedTime } from 'date-fns-tz';
-import { uk as ukLocale } from 'date-fns/locale/uk';
-import { MESSAGE_STR_SEPARATOR } from '@app/const';
-import { ConfigService } from '@nestjs/config';
 import { editMessage, editMessageMenu } from '@app/utils/editMessage';
-import { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
-import { InsertResult } from 'typeorm';
-import { differenceInMilliseconds, subMinutes } from 'date-fns';
 
 interface SceneData {
   teamId?: number;

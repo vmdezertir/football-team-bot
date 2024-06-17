@@ -1,3 +1,5 @@
+import { IsArray, IsDefined, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+
 import {
   IFollowOdd,
   IFollowOddBookmaker,
@@ -6,7 +8,6 @@ import {
   IPlayerStatsWidgetContent,
   IPlayersStatsResponse,
 } from '@app/interfaces';
-import { IsArray, IsDefined, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
 class BaseWidgetDto {
   @IsDefined()

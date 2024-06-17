@@ -1,6 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Scene, SceneEnter, Ctx, Action } from 'nestjs-telegraf';
+import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
+import { Markup } from 'telegraf';
+
+import { Scenes } from '@app/@types/custom';
+import { SEPARATOR } from '@app/const';
 import { ECallbacks, EScenes } from '@app/enums';
+import { ILeague } from '@app/interfaces';
+import { ITeam } from '@app/interfaces/team';
+import { FavoriteRepository, UserRepository } from '@app/repositories';
+import { ApiFootballService } from '@app/services/apiFootball.service';
 import {
   getAnswer,
   getAnswerIdentifiers,
@@ -12,14 +20,6 @@ import {
   getUserId,
   renderError,
 } from '@app/utils';
-import { Markup } from 'telegraf';
-import { ApiFootballService } from '@app/services/apiFootball.service';
-import { ITeam } from '@app/interfaces/team';
-import { Scenes } from '@app/@types/custom';
-import { ILeague } from '@app/interfaces';
-import { FavoriteRepository, UserRepository } from '@app/repositories';
-import { error } from 'console';
-import { SEPARATOR } from '@app/const';
 import { editMessage, editMessageMenu } from '@app/utils/editMessage';
 
 interface SceneData {
@@ -236,7 +236,7 @@ export class AddTeamScene {
         apiId: team.id,
       });
     } catch (err) {
-      this.logger.error('Team save error:', error);
+      this.logger.error('Team save error:', err);
       await renderError(
         ctx,
         'notFound',

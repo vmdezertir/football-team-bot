@@ -1,8 +1,9 @@
-import { FindOptionsWhere, DataSource, Repository } from 'typeorm';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { InsertResult } from 'typeorm/query-builder/result/InsertResult';
 import { UpdateResult } from 'typeorm/query-builder/result/UpdateResult';
-import { Injectable, BadRequestException } from '@nestjs/common';
+
 import { Favorite } from '@app/entities';
 
 @Injectable()

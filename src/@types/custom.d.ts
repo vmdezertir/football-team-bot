@@ -1,10 +1,10 @@
-import { SceneSessionData, SceneSession, SceneContext } from 'telegraf/typings/scenes';
-import SceneContextScene from 'telegraf/typings/scenes/context';
-import { Update } from 'telegraf/typings/core/types/typegram';
-
 import { CallbackQuery } from '@telegraf/types/markup';
-import { CastProperty } from '@app/utils/utilityTypes';
 import Context from 'telegraf/typings/context';
+import { Update } from 'telegraf/typings/core/types/typegram';
+import { SceneContext, SceneSession, SceneSessionData } from 'telegraf/typings/scenes';
+import SceneContextScene from 'telegraf/typings/scenes/context';
+
+import { CastProperty } from '@app/utils/utilityTypes';
 
 interface CSessionData {
   errMsgId?: number;

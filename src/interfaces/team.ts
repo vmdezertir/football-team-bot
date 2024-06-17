@@ -1,7 +1,7 @@
 import { BaseApiResponse } from './common';
-import { IPlayer, IPlayerInjure } from './player';
-import { ILeague } from './league';
 import { EFixtureStatus } from './fixtureStatus';
+import { ILeague } from './league';
+import { IPlayer, IPlayerInjure } from './player';
 
 export interface IShortInfoTeam {
   id: number;

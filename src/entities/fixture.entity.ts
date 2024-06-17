@@ -1,4 +1,5 @@
 import { CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+
 import { User } from './user.entity';
 
 @Entity({ name: 'fixtures' })

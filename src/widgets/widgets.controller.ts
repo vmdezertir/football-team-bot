@@ -1,4 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Query, Render } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
 import {
   WidgetsFixtureOddsDto,
   WidgetsGameRespDto,
@@ -6,7 +8,6 @@ import {
   WidgetsLeagueStatsRespDto,
   WidgetsStandingsRespDto,
 } from './widgets.dto';
-import { ConfigService } from '@nestjs/config';
 import { WidgetsService } from './widgets.service';
 
 @Controller('widgets')

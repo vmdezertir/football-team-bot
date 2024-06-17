@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
-import { WidgetsController } from './widgets.controller';
 import { ConfigService } from '@nestjs/config';
-import { ApiFootballService } from '@app/services';
-import { WidgetsService } from './widgets.service';
+
 import { FavoriteRepository, UserRepository } from '@app/repositories';
+import { ApiFootballService } from '@app/services';
+
+import { WidgetsController } from './widgets.controller';
+import { WidgetsService } from './widgets.service';
+
 @Module({
   imports: [],
   controllers: [WidgetsController],

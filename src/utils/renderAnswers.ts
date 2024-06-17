@@ -1,5 +1,6 @@
-import { Scenes } from '@app/@types/custom';
 import { Message } from 'telegraf/typings/core/types/typegram';
+
+import { Scenes } from '@app/@types/custom';
 
 export type TErrorType = 'db' | 'api' | 'notFound';
 

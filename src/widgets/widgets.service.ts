@@ -1,8 +1,10 @@
+import { Injectable, Logger } from '@nestjs/common';
+
+import { IFollowOdd, IFollowOddValue, IOddsTableData } from '@app/interfaces';
 import { UserRepository } from '@app/repositories';
 import { ApiFootballService } from '@app/services';
-import { Injectable, Logger } from '@nestjs/common';
+
 import { WidgetsFixtureOddsDto, WidgetsLeagueStatsRespDto } from './widgets.dto';
-import { IFollowOdd, IFollowOddValue, IOddsTableData } from '@app/interfaces';
 
 @Injectable()
 export class WidgetsService {

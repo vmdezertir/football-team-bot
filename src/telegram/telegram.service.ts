@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Context, Markup } from 'telegraf';
+
 import { ECommands } from '@app/enums';
 import { UserRepository } from '@app/repositories';
+
 @Injectable()
 export class TelegramStartService {
   private readonly logger = new Logger(TelegramStartService.name);

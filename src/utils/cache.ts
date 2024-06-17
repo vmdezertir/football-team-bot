@@ -1,5 +1,5 @@
-import { Redis } from 'ioredis';
 import { StorageValue, buildStorage, canStale } from 'axios-cache-interceptor';
+import { Redis } from 'ioredis';
 
 export const getRedisStorage = (client: Redis) =>
   buildStorage({

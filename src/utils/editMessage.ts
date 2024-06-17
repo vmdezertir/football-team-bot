@@ -1,6 +1,7 @@
 import { Context } from 'telegraf';
-import { getUserId } from './getUserId';
 import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
+
+import { getUserId } from './getUserId';
 
 export interface IEditMessageExtra {
   messageId?: number;

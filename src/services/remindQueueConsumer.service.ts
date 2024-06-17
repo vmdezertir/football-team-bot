@@ -1,6 +1,4 @@
-import { EFixtureStatus, IFixture, IFollowJob } from '@app/interfaces';
-import { FixtureRepository } from '@app/repositories';
-import { Processor, Process, OnQueueCompleted } from '@nestjs/bull';
+import { OnQueueCompleted, Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bull';
@@ -8,9 +6,13 @@ import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { InjectBot } from 'nestjs-telegraf';
 import { Context, Markup, Telegraf } from 'telegraf';
-import { ApiFootballService } from './apiFootball.service';
 import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
+
 import { MESSAGE_NOTIFY_SEPARATOR } from '@app/const';
+import { EFixtureStatus, IFixture, IFollowJob } from '@app/interfaces';
+import { FixtureRepository } from '@app/repositories';
+
+import { ApiFootballService } from './apiFootball.service';
 
 @Processor('remind')
 export class RemindQueueConsumerService {

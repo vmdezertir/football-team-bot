@@ -1,3 +1,4 @@
+import { IsDefined, IsInt, IsString, Min, ValidateNested } from 'class-validator';
 import {
   Column,
   CreateDateColumn,
@@ -9,8 +10,8 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { Favorite } from './favorite.entity';
-import { IsDefined, IsInt, IsString, Min, ValidateNested } from 'class-validator';
 import { Fixture } from './fixture.entity';
 
 export interface ISetNameValue {

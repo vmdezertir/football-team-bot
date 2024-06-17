@@ -1,19 +1,19 @@
+import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
-import { Hears, Start, TelegrafModule, Update } from 'nestjs-telegraf';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { Postgres } from '@telegraf/session/pg';
+import { Hears, Start, TelegrafModule, Update } from 'nestjs-telegraf';
 import { Context, session } from 'telegraf';
-import { AddTeamScene, FavoriteScene, SettingsScene } from '@app/scenes';
-import { TelegramStartService } from '@app/telegram/telegram.service';
-import { EScenes } from '@app/enums';
 import { SceneContext } from 'telegraf/scenes';
 
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { Favorite, Fixture, User } from '@app/entities';
-import { FavoriteRepository, UserRepository, FixtureRepository } from '@app/repositories';
-import { cleanupMiddleware } from '@app/utils';
-import { BullModule } from '@nestjs/bull';
+import { EScenes } from '@app/enums';
+import { FavoriteRepository, FixtureRepository, UserRepository } from '@app/repositories';
+import { AddTeamScene, FavoriteScene, SettingsScene } from '@app/scenes';
 import { ApiFootballService, RemindQueueConsumerService } from '@app/services';
+import { TelegramStartService } from '@app/telegram/telegram.service';
+import { cleanupMiddleware } from '@app/utils';
 
 @Module({
   imports: [

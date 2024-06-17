@@ -1,5 +1,5 @@
 import { BaseApiResponse } from './common';
-import { IPLeague, IFixture, IShortInfoTeam } from './team';
+import { IFixture, IPLeague, IShortInfoTeam } from './team';
 
 export interface IBet {
   id: number;

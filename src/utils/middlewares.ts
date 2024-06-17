@@ -1,5 +1,6 @@
-import { getUserId } from './getUserId';
 import { Scenes } from '@app/@types/custom';
+
+import { getUserId } from './getUserId';
 
 export const cleanupMiddleware = async (ctx: Scenes.SContext<{}>, next: () => Promise<void>) => {
   const { errMsgId } = ctx.session || {};

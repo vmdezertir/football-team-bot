@@ -1,8 +1,12 @@
-import { EScenes, ESettingsActions } from '@app/enums';
-import { UserRepository } from '@app/repositories';
 import { Injectable, Logger } from '@nestjs/common';
 import { Action, Ctx, Scene, SceneEnter } from 'nestjs-telegraf';
+import { Markup } from 'telegraf';
+
 import { Scenes } from '@app/@types/custom';
+import { ISetNameValue, ISettings, SettingsDto, User } from '@app/entities';
+import { EScenes, ESettingsActions } from '@app/enums';
+import { UserRepository } from '@app/repositories';
+import { ApiFootballService } from '@app/services';
 import {
   START_SETTINGS_BTS,
   getAnswerIdentifiers,
@@ -10,10 +14,7 @@ import {
   getUserId,
   renderError,
 } from '@app/utils';
-import { ApiFootballService } from '@app/services';
-import { Markup } from 'telegraf';
 import { editMessage } from '@app/utils/editMessage';
-import { ISetNameValue, ISettings, SettingsDto, User } from '@app/entities';
 
 interface SceneData {
   bookmakers?: ISetNameValue[];

@@ -1,5 +1,6 @@
-import { SEPARATOR } from '@app/const';
 import { CallbackQuery } from '@telegraf/types/markup';
+
+import { SEPARATOR } from '@app/const';
 
 export const getAnswer = (update: { callback_query: CallbackQuery }): string | null => {
   const cbQuery = update.callback_query;

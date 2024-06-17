@@ -1,28 +1,29 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import Axios from 'axios';
+import { AxiosCacheInstance, CacheRequestConfig, setupCache } from 'axios-cache-interceptor';
+import { format, isAfter, isSameYear } from 'date-fns';
+import { Redis } from 'ioredis';
 import { groupBy } from 'lodash';
+
 import {
+  IBet,
+  IBookmakers,
+  IFixtureOddsResponse,
+  IFixturePredictionResponse,
   ILeague,
+  ILeagueResponse,
+  IPlayerStatsWidgetContent,
+  IPlayersStatsResponse,
   ISquad,
+  ITeamCoachResponse,
   ITeamFixturesResponse,
   ITeamLeagueResponse,
-  ITeamCoachResponse,
   ITeamPlayerInjuresResponse,
-  IFixturePredictionResponse,
-  IFixtureOddsResponse,
-  IBet,
-  ITeamSquadResponse,
   ITeamResponse,
-  ILeagueResponse,
-  IPlayersStatsResponse,
-  IPlayerStatsWidgetContent,
-  IBookmakers,
+  ITeamSquadResponse,
 } from '@app/interfaces';
 import { ITeam } from '@app/interfaces';
-import { isAfter, isSameYear, format } from 'date-fns';
-import { AxiosCacheInstance, setupCache, CacheRequestConfig } from 'axios-cache-interceptor';
-import { Redis } from 'ioredis';
-import { ConfigService } from '@nestjs/config';
 import { getRedisStorage } from '@app/utils';
 
 @Injectable()

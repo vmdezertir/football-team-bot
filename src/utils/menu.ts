@@ -1,12 +1,14 @@
-import countryJson from './country.json';
 import { Markup } from 'telegraf';
+import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
+
+import { COUNTRY_LIMIT, SEPARATOR } from '@app/const';
+import { Favorite, ISetNameValue } from '@app/entities';
+import { ECallbacks, ESettingsActions } from '@app/enums';
 import { ILeague } from '@app/interfaces';
 import { ITeam } from '@app/interfaces/team';
-import { Favorite, ISetNameValue } from '@app/entities';
+
+import countryJson from './country.json';
 import { getFlagEmoji } from './emoji';
-import { ECallbacks, ESettingsActions } from '@app/enums';
-import { SEPARATOR, COUNTRY_LIMIT } from '@app/const';
-import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
 
 export const getArrayChunk = (
   array: InlineKeyboardButton.CallbackButton[],

@@ -1,9 +1,10 @@
+import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { TelegramModule } from '@app/telegram/telegram.module';
 import { WidgetsModule } from '@app/widgets/widgets.module';
-import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
